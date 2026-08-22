@@ -48,9 +48,9 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
 
   useEffect(() => {
     const unsubscribe = microphone.subscribe({
-      onSample: (sample) => {
-        setLiveSample(sample);
-        if (sample) sessionRef.current?.addSample(sample);
+      onSample: (frame) => {
+        setLiveSample(frame.smoothed);
+        sessionRef.current?.addFrame(frame);
       },
       onStatus: (status, error) => {
         setMicStatus(status);

@@ -1,5 +1,5 @@
 import { clamp } from "../music/theory";
-import type { PitchDetector, PitchEstimate } from "./PitchDetector";
+import { rootMeanSquare, type PitchDetector, type PitchEstimate } from "./PitchDetector";
 
 export interface AutocorrelationOptions {
   minHz: number;
@@ -26,9 +26,7 @@ export class AutocorrelationDetector implements PitchDetector {
   constructor(private readonly opts: AutocorrelationOptions = DEFAULTS) {}
 
   estimate(buffer: Float32Array, sampleRate: number): PitchEstimate | null {
-    let rms = 0;
-    for (let i = 0; i < buffer.length; i += 1) rms += buffer[i] * buffer[i];
-    rms = Math.sqrt(rms / buffer.length);
+    const rms = rootMeanSquare(buffer);
     if (rms < this.opts.minRms) return null;
 
     const minLag = Math.max(2, Math.floor(sampleRate / this.opts.maxHz));
@@ -42,7 +40,7 @@ export class AutocorrelationDetector implements PitchDetector {
       let energyA = 0;
       let energyB = 0;
       const length = buffer.length - lag;
-      for (let i = 0; i < length; i += 2) {
+      for (let i = 0; i < length; i += 1) {
         const a = buffer[i];
         const b = buffer[i + lag];
         numerator += a * b;

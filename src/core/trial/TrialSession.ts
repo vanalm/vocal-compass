@@ -75,12 +75,23 @@ export class TrialSession {
     this.goAt = this.now();
   }
 
-  addSample(sample: PitchSample): void {
+  /**
+   * Ingest one polling tick. Raw drives voicing-onset timing (the selection
+   * latency KPI must not pay the smoother's confirmation delay); smoothed is
+   * what the trace and classifier see.
+   */
+  addFrame(frame: { raw: PitchSample | null; smoothed: PitchSample | null }): void {
     if (this.phase !== "sing") return;
-    this.samples.push(sample);
-    if (this.firstVoicedAt == null && sample.clarity >= 0.5 && sample.rms >= 0.008) {
-      this.firstVoicedAt = sample.at;
+    const { raw, smoothed } = frame;
+    if (raw && this.firstVoicedAt == null && raw.clarity >= 0.5 && raw.rms >= 0.008) {
+      this.firstVoicedAt = raw.at;
     }
+    if (smoothed) this.samples.push(smoothed);
+  }
+
+  /** Single-stream convenience for tests and non-engine callers. */
+  addSample(sample: PitchSample): void {
+    this.addFrame({ raw: sample, smoothed: sample });
   }
 
   markLost(): void {
@@ -138,7 +149,7 @@ export class TrialSession {
       confidenceBefore: this.confidenceBefore,
       effort: this.effort,
       register: this.register,
-      trace: this.samples.map((s) => ({ t: s.at, midi: s.midi, clarity: s.clarity })),
+      trace: this.trace,
       createdAt: new Date().toISOString(),
     };
   }

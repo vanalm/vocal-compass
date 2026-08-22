@@ -36,8 +36,9 @@ DOM assumptions — and every seam is an interface or abstract class:
 | `trial/TrialSession.ts` | State machine for one attempt (listen → imagine → sing → review); owns timing, trace, rescue | — |
 | `trial/AttemptClassifier.ts` | Separates destination selection from landing; injectable thresholds for device calibration | Pass custom `ClassifierThresholds` |
 | `trial/RescueLadder.ts` | Graded "I'm lost" hints; records the minimum support needed | — |
-| `pitch/PitchDetector.ts` | Estimator seam; shipped `AutocorrelationDetector` is replaceable by a YIN/pYIN-class impl | Implement `PitchDetector` |
-| `pitch/MicrophoneEngine.ts` | getUserMedia/AudioContext lifecycle; detector injected | — |
+| `pitch/PitchDetector.ts` | Estimator seam; shipped default is `MpmDetector` (McLeod, via pitchy), with the dependency-free `AutocorrelationDetector` as fallback | Implement `PitchDetector` |
+| `pitch/PitchSmoother.ts` | Streaming spike suppressor: clarity gate + one-frame confirmation for large jumps; never bends values, so real octave leaps survive | Pass custom `SmootherOptions` |
+| `pitch/MicrophoneEngine.ts` | getUserMedia/AudioContext lifecycle with an 80Hz high-pass; emits `{raw, smoothed}` frames; detector and smoother injected | — |
 | `audio/CuePlayer.ts` | Web Audio cue synthesis (notes, sequences, cadences) | — |
 | `storage/TrialRepository.ts` | Persistence seam: IndexedDB in the browser, memory in tests, sync later | Implement `TrialRepository` |
 | `kpi/KpiCalculator.ts` | KPI engine — deliberately never one "singing score" | — |
@@ -56,8 +57,8 @@ Progress, Protocol) render state.
 - Intent confirmation on ambiguous trials — the app never pretends a pitch
   tracker can read intention.
 - Unscored beats mis-scored: low-confidence audio is flagged for retry.
-- The autocorrelation detector is v1-grade. Validate or replace it (the
-  `PitchDetector` interface is the seam) before trusting fine-grained cents
-  data across devices, rooms, and registers.
+- The MPM detector plus smoother is solid for note-level work; validate
+  across devices, rooms, and registers before trusting fine-grained cents
+  data. Noisy environments (cars, streets) still need a close mic.
 - Not yet built: song import (Phrase GPS), load ladder automation, register
   heat map, account sync.
