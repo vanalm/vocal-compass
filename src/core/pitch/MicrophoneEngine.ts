@@ -1,20 +1,6 @@
-import { hzToMidi } from "../music/theory";
-import type { PitchSample } from "../types";
-import { MpmDetector } from "./MpmDetector";
-import type { PitchDetector } from "./PitchDetector";
-import { PitchSmoother } from "./PitchSmoother";
+import { PitchPipeline, type PitchFrame } from "./PitchPipeline";
 
 export type MicStatus = "idle" | "requesting" | "live" | "error";
-
-/**
- * One polling tick of pitch data. `raw` is the ungated detector estimate —
- * use it for voicing-onset timing (selection latency). `smoothed` has passed
- * the clarity gate and spike suppression — use it for traces and display.
- */
-export interface PitchFrame {
-  raw: PitchSample | null;
-  smoothed: PitchSample | null;
-}
 
 export interface MicListener {
   onSample?(frame: PitchFrame): void;
@@ -29,8 +15,8 @@ declare global {
 
 /**
  * Owns the getUserMedia/AudioContext lifecycle and pushes PitchFrames to
- * listeners on a fixed polling cadence. The detector and smoother are
- * injected, so this class never changes when the estimator does.
+ * listeners on a fixed polling cadence. All per-tick signal logic lives in
+ * the injected PitchPipeline; this class is only the audio plumbing.
  */
 export class MicrophoneEngine {
   private context: AudioContext | null = null;
@@ -40,8 +26,7 @@ export class MicrophoneEngine {
   private _status: MicStatus = "idle";
 
   constructor(
-    private readonly detector: PitchDetector = new MpmDetector(),
-    private readonly smoother: PitchSmoother = new PitchSmoother(),
+    private readonly pipeline: PitchPipeline = new PitchPipeline(),
     private readonly pollMs = 70,
   ) {}
 
@@ -87,24 +72,13 @@ export class MicrophoneEngine {
       source.connect(highpass);
       highpass.connect(analyser);
       const buffer = new Float32Array(analyser.fftSize);
-      this.smoother.reset();
+      this.pipeline.reset();
       this.setStatus("live");
 
       const loop = () => {
         if (!this.context) return;
         analyser.getFloatTimeDomainData(buffer);
-        const estimate = this.detector.estimate(buffer, this.context.sampleRate);
-        let raw: PitchSample | null = null;
-        if (estimate && estimate.hz >= 60 && estimate.hz <= 1200) {
-          raw = {
-            at: Date.now(),
-            hz: estimate.hz,
-            midi: hzToMidi(estimate.hz),
-            clarity: estimate.clarity,
-            rms: estimate.rms,
-          };
-        }
-        const frame: PitchFrame = { raw, smoothed: this.smoother.push(raw) };
+        const frame = this.pipeline.process(buffer, this.context.sampleRate, Date.now());
         for (const l of this.listeners) l.onSample?.(frame);
         this.timer = window.setTimeout(loop, this.pollMs);
       };
@@ -122,7 +96,7 @@ export class MicrophoneEngine {
     this.stream = null;
     void this.context?.close();
     this.context = null;
-    this.smoother.reset();
+    this.pipeline.reset();
     if (this._status !== "error") this.setStatus("idle");
   }
 

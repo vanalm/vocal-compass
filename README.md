@@ -38,7 +38,9 @@ DOM assumptions — and every seam is an interface or abstract class:
 | `trial/RescueLadder.ts` | Graded "I'm lost" hints; records the minimum support needed | — |
 | `pitch/PitchDetector.ts` | Estimator seam; shipped default is `MpmDetector` (McLeod, via pitchy), with the dependency-free `AutocorrelationDetector` as fallback | Implement `PitchDetector` |
 | `pitch/PitchSmoother.ts` | Streaming spike suppressor: clarity gate + one-frame confirmation for large jumps; never bends values, so real octave leaps survive | Pass custom `SmootherOptions` |
-| `pitch/MicrophoneEngine.ts` | getUserMedia/AudioContext lifecycle with an 80Hz high-pass; emits `{raw, smoothed}` frames; detector and smoother injected | — |
+| `pitch/NoiseFloorTracker.ts` | Adaptive voicing gate: low-percentile rolling floor of unvoiced frames; equals the old fixed gate in quiet rooms, flags `tooNoisy` when singing can't be separated | Pass custom `NoiseFloorOptions` |
+| `pitch/PitchPipeline.ts` | The per-tick path (detector → noise gate → smoother); pure, so the gating truth table is unit-tested with a stubbed detector | Inject detector/smoother/tracker |
+| `pitch/MicrophoneEngine.ts` | getUserMedia/AudioContext lifecycle with an 80Hz high-pass; delegates every tick to the injected pipeline | — |
 | `audio/CuePlayer.ts` | Web Audio cue synthesis (notes, sequences, cadences) | — |
 | `storage/TrialRepository.ts` | Persistence seam: IndexedDB in the browser, memory in tests, sync later | Implement `TrialRepository` |
 | `kpi/KpiCalculator.ts` | KPI engine — deliberately never one "singing score" | — |
@@ -59,6 +61,8 @@ Progress, Protocol) render state.
 - Unscored beats mis-scored: low-confidence audio is flagged for retry.
 - The MPM detector plus smoother is solid for note-level work; validate
   across devices, rooms, and registers before trusting fine-grained cents
-  data. Noisy environments (cars, streets) still need a close mic.
+  data. The noise gate adapts to loud environments (and warns when they are
+  too loud), but pitch accuracy while singing over noise still depends on
+  mic proximity — cars and streets want a headset mic.
 - Not yet built: song import (Phrase GPS), load ladder automation, register
   heat map, account sync.

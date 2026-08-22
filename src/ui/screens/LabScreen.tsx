@@ -184,6 +184,11 @@ export function LabScreen({
           <div className="vc-prompt" style={{ marginTop: 40 }}>
             <h3>Sing</h3>
             <p>Commit to one note. Capture stops automatically.</p>
+            {runner.tooNoisy && (
+              <p className="vc-small vc-noise-warning">
+                Too noisy here — quiet singing may go unscored. Move somewhere quieter or use a closer mic.
+              </p>
+            )}
             {showLive && <PitchReadout sample={runner.liveSample} targetMidi={trial.targetMidi} />}
             <div className="vc-actions vc-center-actions">
               <button className="vc-button" onClick={runner.finish}>Done</button>

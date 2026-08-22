@@ -42,6 +42,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
   const [liveSample, setLiveSample] = useState<PitchSample | null>(null);
   const [micStatus, setMicStatus] = useState<MicStatus>("idle");
   const [micError, setMicError] = useState<string | null>(null);
+  const [tooNoisy, setTooNoisy] = useState(false);
   const [analysis, setAnalysis] = useState<AttemptAnalysis | null>(null);
   const [lost, setLost] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
@@ -50,6 +51,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
     const unsubscribe = microphone.subscribe({
       onSample: (frame) => {
         setLiveSample(frame.smoothed);
+        setTooNoisy(frame.noise.tooNoisy);
         sessionRef.current?.addFrame(frame);
       },
       onStatus: (status, error) => {
@@ -174,6 +176,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
     liveSample,
     micStatus,
     micError,
+    tooNoisy,
     analysis,
     lost,
     hintLevel,
