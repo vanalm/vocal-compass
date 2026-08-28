@@ -38,6 +38,7 @@ export class MemoryTrialRepository implements TrialRepository {
   private measurements: RangeMeasurement[] = [];
 
   async save(record: TrialRecord): Promise<void> {
+    this.records = this.records.filter((r) => r.id !== record.id);
     this.records.push(record);
   }
 
@@ -46,6 +47,7 @@ export class MemoryTrialRepository implements TrialRepository {
   }
 
   async saveRange(measurement: RangeMeasurement): Promise<void> {
+    this.measurements = this.measurements.filter((m) => m.id !== measurement.id);
     this.measurements.push(measurement);
   }
 

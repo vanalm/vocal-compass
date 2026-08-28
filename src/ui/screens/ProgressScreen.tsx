@@ -9,18 +9,21 @@ import {
 import { useServices } from "../services";
 import { KpiCards } from "../components/KpiCards";
 import { RangeProbe } from "../components/RangeProbe";
+import { AccountCard } from "../components/AccountCard";
 import { PracticeChart, RangeChart, RegisterHeatMap } from "../components/ProgressCharts";
 
 export function ProgressScreen({
   trials,
   ranges,
   onSaveRange,
+  onSynced,
   onExport,
   onClear,
 }: {
   trials: TrialRecord[];
   ranges: RangeMeasurement[];
   onSaveRange: (m: RangeMeasurement) => Promise<void>;
+  onSynced: () => Promise<void>;
   onExport: () => void;
   onClear: () => void;
 }) {
@@ -53,6 +56,7 @@ export function ProgressScreen({
           </div>
         </div>
         <KpiCards summary={summary} />
+        <AccountCard onSynced={onSynced} />
       </section>
 
       <div className="vc-chart-grid" style={{ gridColumn: "span 12" }}>

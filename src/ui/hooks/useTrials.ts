@@ -51,5 +51,5 @@ export function useTrials() {
     URL.revokeObjectURL(url);
   }, [repository]);
 
-  return { trials, ranges, loaded, save, saveRange, clear, exportJson };
+  return { trials, ranges, loaded, save, saveRange, clear, exportJson, refresh };
 }

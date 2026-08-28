@@ -11,7 +11,7 @@ type Screen = "today" | "lab" | "progress" | "protocol";
 function Shell() {
   const [screen, setScreen] = useState<Screen>("today");
   const [labExerciseId, setLabExerciseId] = useState<string | undefined>();
-  const { trials, ranges, save, saveRange, clear, exportJson } = useTrials();
+  const { trials, ranges, save, saveRange, clear, exportJson, refresh } = useTrials();
 
   const openLab = (exerciseId: string) => {
     setLabExerciseId(exerciseId);
@@ -26,7 +26,7 @@ function Shell() {
             <div className="vc-mark">◈</div>
             <div>
               <h1>Vocal Compass</h1>
-              <p>Melodic navigation trainer — local-first, no account</p>
+              <p>Melodic navigation trainer — local-first, optional sync</p>
             </div>
           </div>
         </header>
@@ -40,6 +40,7 @@ function Shell() {
             trials={trials}
             ranges={ranges}
             onSaveRange={saveRange}
+            onSynced={refresh}
             onExport={() => void exportJson()}
             onClear={() => void clear()}
           />

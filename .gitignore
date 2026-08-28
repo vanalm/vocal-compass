@@ -5,3 +5,6 @@ dist/
 tsconfig.tsbuildinfo
 *.local
 .env
+server/.venv/
+server/__pycache__/
+server/*.db

@@ -6,8 +6,12 @@ import {
   MemoryTrialRepository,
   MicrophoneEngine,
   Recommender,
+  SyncClient,
   type TrialRepository,
 } from "../core";
+
+const SYNC_URL =
+  (import.meta.env?.VITE_SYNC_URL as string | undefined) ?? "http://localhost:8799";
 
 /**
  * Composition root: every service is constructed once here and injected
@@ -19,6 +23,7 @@ export interface AppServices {
   cues: CuePlayer;
   kpi: KpiCalculator;
   recommender: Recommender;
+  sync: SyncClient;
 }
 
 const ServicesContext = createContext<AppServices | null>(null);
@@ -34,6 +39,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
       cues: new CuePlayer(),
       kpi: new KpiCalculator(),
       recommender: new Recommender(),
+      sync: new SyncClient(SYNC_URL),
     };
   }, []);
   return <ServicesContext.Provider value={services}>{children}</ServicesContext.Provider>;

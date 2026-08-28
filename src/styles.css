@@ -185,3 +185,6 @@ button { cursor: pointer; }
 .vc-heatmap-cell { display: grid; gap: 4px; justify-items: center; font-size: 10px; color: #748b82; }
 .vc-heatmap-swatch { width: 34px; height: 22px; border-radius: 6px; background: transparent; border: 1px dashed #29443a; }
 .vc-heatmap-cell [style] { border: 0; }
+.vc-account { margin-top: 14px; border-top: 1px solid #1d332a; padding-top: 12px; display: grid; gap: 8px; }
+.vc-account-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.vc-input { background: #10201a; border: 1px solid #29443a; border-radius: 10px; padding: 10px 12px; color: #eaf8f1; font-size: 13px; min-width: 200px; }

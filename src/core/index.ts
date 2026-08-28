@@ -26,6 +26,8 @@ export type { HeldExtremes, RangeAnalyzerOptions } from "./pitch/RangeAnalyzer";
 export { practiceDays } from "./kpi/practiceTime";
 export { pitchZones } from "./kpi/pitchZones";
 export type { PitchZone } from "./kpi/pitchZones";
+export { SyncClient } from "./sync/SyncClient";
+export type { KeyValueStore } from "./sync/SyncClient";
 export type { PracticeDay, PracticeTimeOptions } from "./kpi/practiceTime";
 export { CuePlayer } from "./audio/CuePlayer";
 export { MemoryTrialRepository } from "./storage/TrialRepository";
