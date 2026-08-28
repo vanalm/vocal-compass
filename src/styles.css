@@ -181,3 +181,7 @@ button { cursor: pointer; }
 .vc-range-probe { margin-top: 10px; display: grid; gap: 8px; justify-items: start; }
 .vc-range-live { font-size: 22px; font-weight: 800; margin: 0; color: #8ce8bd; }
 .vc-range-live span { font-size: 13px; font-weight: 700; color: #a8bbb4; margin-left: 8px; }
+.vc-heatmap { display: flex; gap: 4px; flex-wrap: wrap; }
+.vc-heatmap-cell { display: grid; gap: 4px; justify-items: center; font-size: 10px; color: #748b82; }
+.vc-heatmap-swatch { width: 34px; height: 22px; border-radius: 6px; background: transparent; border: 1px dashed #29443a; }
+.vc-heatmap-cell [style] { border: 0; }

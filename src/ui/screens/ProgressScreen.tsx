@@ -1,6 +1,7 @@
 import {
   exercises,
   noteName,
+  pitchZones,
   practiceDays,
   type RangeMeasurement,
   type TrialRecord,
@@ -8,7 +9,7 @@ import {
 import { useServices } from "../services";
 import { KpiCards } from "../components/KpiCards";
 import { RangeProbe } from "../components/RangeProbe";
-import { PracticeChart, RangeChart } from "../components/ProgressCharts";
+import { PracticeChart, RangeChart, RegisterHeatMap } from "../components/ProgressCharts";
 
 export function ProgressScreen({
   trials,
@@ -124,6 +125,16 @@ export function ProgressScreen({
               </tbody>
             </table>
           )}
+        </section>
+
+        <section className="vc-card vc-chart-card wide">
+          <div className="vc-chart-title">
+            <div>
+              <h3>Register heat map</h3>
+              <p>Destination accuracy by target pitch — where the range work should aim</p>
+            </div>
+          </div>
+          <RegisterHeatMap zones={pitchZones(trials)} />
         </section>
 
         <section className="vc-card vc-chart-card wide">

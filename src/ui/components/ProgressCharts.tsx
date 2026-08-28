@@ -1,4 +1,35 @@
-import { noteName, type PracticeDay, type RangeMeasurement } from "../../core";
+import { noteName, type PitchZone, type PracticeDay, type RangeMeasurement } from "../../core";
+
+/** Accuracy by pitch zone: where in the range the destinations land or miss. */
+export function RegisterHeatMap({ zones }: { zones: PitchZone[] }) {
+  if (zones.length === 0) return <div className="vc-empty">Scored trials build the register map.</div>;
+
+  return (
+    <div className="vc-heatmap" role="img" aria-label="Accuracy by pitch zone">
+      {zones.map((zone) => (
+        <div
+          key={zone.lowMidi}
+          className="vc-heatmap-cell"
+          title={
+            zone.accuracy == null
+              ? `${zone.label}: no scored trials`
+              : `${zone.label}: ${Math.round(zone.accuracy * 100)}% of ${zone.scored}`
+          }
+        >
+          <div
+            className="vc-heatmap-swatch"
+            style={
+              zone.accuracy == null
+                ? undefined
+                : { background: `hsl(${8 + zone.accuracy * 144} 60% ${28 + zone.accuracy * 14}%)` }
+            }
+          />
+          <span>{noteName(zone.lowMidi)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /** Low/high range lines over successive measurements. */
 export function RangeChart({ ranges }: { ranges: RangeMeasurement[] }) {
