@@ -11,7 +11,7 @@ type Screen = "today" | "lab" | "progress" | "protocol";
 function Shell() {
   const [screen, setScreen] = useState<Screen>("today");
   const [labExerciseId, setLabExerciseId] = useState<string | undefined>();
-  const { trials, save, clear, exportJson } = useTrials();
+  const { trials, ranges, save, saveRange, clear, exportJson } = useTrials();
 
   const openLab = (exerciseId: string) => {
     setLabExerciseId(exerciseId);
@@ -36,7 +36,13 @@ function Shell() {
           <LabScreen key={labExerciseId ?? "lab"} save={save} initialExerciseId={labExerciseId} />
         )}
         {screen === "progress" && (
-          <ProgressScreen trials={trials} onExport={() => void exportJson()} onClear={() => void clear()} />
+          <ProgressScreen
+            trials={trials}
+            ranges={ranges}
+            onSaveRange={saveRange}
+            onExport={() => void exportJson()}
+            onClear={() => void clear()}
+          />
         )}
         {screen === "protocol" && <ProtocolScreen />}
       </div>

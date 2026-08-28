@@ -1,13 +1,25 @@
-import { exercises, noteName, type TrialRecord } from "../../core";
+import {
+  exercises,
+  noteName,
+  practiceDays,
+  type RangeMeasurement,
+  type TrialRecord,
+} from "../../core";
 import { useServices } from "../services";
 import { KpiCards } from "../components/KpiCards";
+import { RangeProbe } from "../components/RangeProbe";
+import { PracticeChart, RangeChart } from "../components/ProgressCharts";
 
 export function ProgressScreen({
   trials,
+  ranges,
+  onSaveRange,
   onExport,
   onClear,
 }: {
   trials: TrialRecord[];
+  ranges: RangeMeasurement[];
+  onSaveRange: (m: RangeMeasurement) => Promise<void>;
   onExport: () => void;
   onClear: () => void;
 }) {
@@ -17,6 +29,10 @@ export function ProgressScreen({
   const delayCurve = kpi.byDelay(trials);
   const trend = kpi.trend(trials);
   const recent = [...trials].slice(-12).reverse();
+  const days = practiceDays([
+    ...trials.map((t) => t.createdAt),
+    ...ranges.map((r) => r.createdAt),
+  ]);
 
   return (
     <div className="vc-grid">
@@ -39,6 +55,27 @@ export function ProgressScreen({
       </section>
 
       <div className="vc-chart-grid" style={{ gridColumn: "span 12" }}>
+        <section className="vc-card vc-chart-card">
+          <div className="vc-chart-title">
+            <div>
+              <h3>Vocal range</h3>
+              <p>Held extremes per probe — usable range, not accidents</p>
+            </div>
+          </div>
+          <RangeChart ranges={ranges} />
+          <RangeProbe onSave={onSaveRange} />
+        </section>
+
+        <section className="vc-card vc-chart-card">
+          <div className="vc-chart-title">
+            <div>
+              <h3>Practice time</h3>
+              <p>Minutes per day, derived from saved work</p>
+            </div>
+          </div>
+          <PracticeChart days={days} />
+        </section>
+
         <section className="vc-card vc-chart-card">
           <div className="vc-chart-title">
             <div>

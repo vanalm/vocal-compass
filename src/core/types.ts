@@ -84,6 +84,14 @@ export interface TrialRecord extends AttemptAnalysis {
   createdAt: string;
 }
 
+/** One saved range-probe result: the held extremes of a siren/glide sweep. */
+export interface RangeMeasurement {
+  id: string;
+  createdAt: string;
+  lowMidi: number;
+  highMidi: number;
+}
+
 export interface KpiSummary {
   total: number;
   scored: number;

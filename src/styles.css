@@ -178,3 +178,6 @@ button { cursor: pointer; }
   .vc-roadmap-item { grid-template-columns: 1fr; gap: 5px; }
 }
 .vc-noise-warning { color: #ffd6ad; background: #2b2118; border: 1px solid #65472c; border-radius: 10px; padding: 8px 10px; margin: 10px auto; max-width: 420px; }
+.vc-range-probe { margin-top: 10px; display: grid; gap: 8px; justify-items: start; }
+.vc-range-live { font-size: 22px; font-weight: 800; margin: 0; color: #8ce8bd; }
+.vc-range-live span { font-size: 13px; font-weight: 700; color: #a8bbb4; margin-left: 8px; }

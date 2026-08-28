@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import type { TrialRecord } from "../../core";
+import type { RangeMeasurement, TrialRecord } from "../../core";
 import { useServices } from "../services";
 
-/** Loads all persisted trials and exposes save/clear/export. */
+/** Loads all persisted trials + range measurements and exposes save/clear/export. */
 export function useTrials() {
   const { repository } = useServices();
   const [trials, setTrials] = useState<TrialRecord[]>([]);
+  const [ranges, setRanges] = useState<RangeMeasurement[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     setTrials(await repository.all());
+    setRanges(await repository.ranges());
     setLoaded(true);
   }, [repository]);
 
@@ -20,6 +22,14 @@ export function useTrials() {
   const save = useCallback(
     async (record: TrialRecord) => {
       await repository.save(record);
+      await refresh();
+    },
+    [repository, refresh],
+  );
+
+  const saveRange = useCallback(
+    async (measurement: RangeMeasurement) => {
+      await repository.saveRange(measurement);
       await refresh();
     },
     [repository, refresh],
@@ -41,5 +51,5 @@ export function useTrials() {
     URL.revokeObjectURL(url);
   }, [repository]);
 
-  return { trials, loaded, save, clear, exportJson };
+  return { trials, ranges, loaded, save, saveRange, clear, exportJson };
 }

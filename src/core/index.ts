@@ -21,6 +21,10 @@ export type { PitchFrame, NoiseState, PipelineOptions } from "./pitch/PitchPipel
 export { NoiseFloorTracker } from "./pitch/NoiseFloorTracker";
 export type { NoiseFloorOptions } from "./pitch/NoiseFloorTracker";
 export { segmentTrace } from "./trial/segmentTrace";
+export { heldExtremes } from "./pitch/RangeAnalyzer";
+export type { HeldExtremes, RangeAnalyzerOptions } from "./pitch/RangeAnalyzer";
+export { practiceDays } from "./kpi/practiceTime";
+export type { PracticeDay, PracticeTimeOptions } from "./kpi/practiceTime";
 export { CuePlayer } from "./audio/CuePlayer";
 export { MemoryTrialRepository } from "./storage/TrialRepository";
 export type { TrialRepository } from "./storage/TrialRepository";
