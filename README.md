@@ -7,8 +7,16 @@ did your voice land on that selected destination?** A clean landing on the
 wrong note is a selection error, not a vocal-control error, and they are
 trained differently.
 
-Everything runs in the browser. Trials persist to IndexedDB; no account, no
-upload. Data exports as JSON from the Progress screen.
+Everything runs in the browser. Trials and range measurements persist to
+IndexedDB and export as JSON from the Progress screen. Accounts are
+optional: a small FastAPI + SQLAlchemy server (`server/`) adds magic-code
+sign-in and multi-device sync — local data stays the source of truth and
+sync is a union merge of immutable records.
+
+```bash
+cd server && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn app:app --port 8799   # dev server echoes sign-in codes
+```
 
 ## Run it
 
@@ -42,7 +50,11 @@ DOM assumptions — and every seam is an interface or abstract class:
 | `pitch/PitchPipeline.ts` | The per-tick path (detector → noise gate → smoother); pure, so the gating truth table is unit-tested with a stubbed detector | Inject detector/smoother/tracker |
 | `pitch/MicrophoneEngine.ts` | getUserMedia/AudioContext lifecycle with an 80Hz high-pass; delegates every tick to the injected pipeline | — |
 | `audio/CuePlayer.ts` | Web Audio cue synthesis (notes, sequences, cadences) | — |
-| `storage/TrialRepository.ts` | Persistence seam: IndexedDB in the browser, memory in tests, sync later | Implement `TrialRepository` |
+| `storage/TrialRepository.ts` | Persistence seam: IndexedDB in the browser, memory in tests; stores trials + range measurements | Implement `TrialRepository` |
+| `pitch/RangeAnalyzer.ts` | Range from a siren sweep: only pitch held ≥3 continuous frames counts — cracks are not range | Pass custom options |
+| `kpi/practiceTime.ts` | Practice minutes derived by clustering record timestamps; no session bookkeeping | — |
+| `kpi/pitchZones.ts` | Register heat map data: destination accuracy per 3-semitone zone | — |
+| `sync/SyncClient.ts` | Union-merge sync against `server/`; token in localStorage; 401 signs out | — |
 | `kpi/KpiCalculator.ts` | KPI engine — deliberately never one "singing score" | — |
 | `recommend/Recommender.ts` | Picks today's session from the largest deficit, with a plain-language reason | — |
 
@@ -64,5 +76,9 @@ Progress, Protocol) render state.
   data. The noise gate adapts to loud environments (and warns when they are
   too loud), but pitch accuracy while singing over noise still depends on
   mic proximity — cars and streets want a headset mic.
-- Not yet built: song import (Phrase GPS), load ladder automation, register
-  heat map, account sync.
+- Range training is measurement + aiming (probe, heat map, edge-biased
+  targets), not technique instruction — the app cannot hear strain, so the
+  effort self-rating gates any range ladder.
+- The sync server ships with dev-mode code echoing and no mailer; wire one
+  up and set `VC_ECHO_CODES=0` before exposing it beyond localhost.
+- Not yet built: song import (Phrase GPS), load ladder automation.
