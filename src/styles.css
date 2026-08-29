@@ -198,3 +198,7 @@ button { cursor: pointer; }
 .vc-move-flat .vc-move-delta { color: #748b82; }
 .vc-spark-wrap { margin-top: 12px; display: grid; gap: 4px; color: #53d69e; }
 .vc-spark { width: 100%; height: 36px; }
+.vc-testbar { height: 6px; border-radius: 999px; background: #142219; overflow: hidden; margin-top: 10px; }
+.vc-testbar i { display: block; height: 100%; background: #53d69e; transition: width .3s ease; }
+.vc-test-what { font-size: 17px; color: #eef6f2; max-width: 560px; margin: 6px auto 0; }
+.vc-test-why { font-size: 13px; color: #8fa69e; max-width: 560px; margin: 8px auto 0; }

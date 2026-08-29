@@ -8,6 +8,8 @@ export type { TrialPhase } from "./trial/TrialSession";
 export { Exercise } from "./exercises/Exercise";
 export type { CuePlan, TrialRequest, Difficulty } from "./exercises/Exercise";
 export { exercises } from "./exercises/registry";
+export { baselineTestPlan, testProgress } from "./protocol/testPlan";
+export type { TestPlan, TestStep, TestProgress } from "./protocol/testPlan";
 export type { PitchDetector, PitchEstimate } from "./pitch/PitchDetector";
 export { AutocorrelationDetector } from "./pitch/AutocorrelationDetector";
 export { MpmDetector } from "./pitch/MpmDetector";
