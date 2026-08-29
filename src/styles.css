@@ -221,3 +221,12 @@ button { cursor: pointer; }
 .vc-verdict-flat { color: #748b82; }
 .vc-row-delete { border: 0; background: transparent; color: #5b7d70; font-size: 13px; padding: 2px 8px; border-radius: 8px; cursor: pointer; }
 .vc-row-delete:hover { color: #ffbdc5; background: #241318; }
+.vc-cue-indicator { display: flex; align-items: center; gap: 10px; justify-content: center; color: #8ce8bd; font-weight: 700; }
+.vc-cue-dot { display: inline-block; animation: vc-pulse 0.9s ease-in-out infinite; font-size: 20px; }
+@keyframes vc-pulse { 0%, 100% { opacity: 0.35; transform: scale(1); } 50% { opacity: 1; transform: scale(1.25); } }
+.vc-micmeter { display: grid; gap: 5px; max-width: 340px; margin: 10px auto; }
+.vc-micmeter-bar { height: 8px; border-radius: 999px; background: #142219; border: 1px solid #1d332a; overflow: hidden; }
+.vc-micmeter-bar i { display: block; height: 100%; background: #5b7d70; transition: width 80ms linear; }
+.vc-micmeter-bar i.heard { background: #53d69e; }
+.vc-micmeter-label { font-size: 11px; color: #748b82; }
+.vc-micmeter-label.heard { color: #53d69e; font-weight: 700; }

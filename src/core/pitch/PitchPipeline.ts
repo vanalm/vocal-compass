@@ -21,6 +21,8 @@ export interface PitchFrame {
   raw: PitchSample | null;
   smoothed: PitchSample | null;
   noise: NoiseState;
+  /** This frame's RMS loudness, voiced or not — drives "the app hears you" UI. */
+  level: number;
 }
 
 export interface PipelineOptions {
@@ -51,8 +53,9 @@ export class PitchPipeline {
 
   process(buffer: Float32Array, sampleRate: number, at: number): PitchFrame {
     const estimate = this.detector.estimate(buffer, sampleRate);
+    const level = estimate?.rms ?? rootMeanSquare(buffer);
     const voiced = estimate != null && estimate.clarity >= this.opts.voicedClarity;
-    if (!voiced) this.noise.update(estimate?.rms ?? rootMeanSquare(buffer));
+    if (!voiced) this.noise.update(level);
 
     let raw: PitchSample | null = null;
     if (
@@ -72,6 +75,7 @@ export class PitchPipeline {
     return {
       raw,
       smoothed: this.smoother.push(raw),
+      level,
       noise: {
         floor: this.noise.floor,
         threshold: this.noise.threshold,

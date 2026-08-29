@@ -12,6 +12,7 @@ import {
 } from "../../core";
 import { useTrialRunner, type RunnerSettings } from "../hooks/useTrialRunner";
 import { PitchReadout } from "../components/PitchReadout";
+import { CueIndicator, HeardCheck, MicMeter } from "../components/TrialStage";
 import { TraceChart } from "../components/TraceChart";
 
 const DELAYS = [0, 2000, 5000, 8000];
@@ -155,8 +156,17 @@ export function LabScreen({
         {runner.phase === "listen" && (
           <div className="vc-prompt" style={{ marginTop: 110 }}>
             <h3>Listen</h3>
-            <p>Key of {trial?.keyName}. The cue is playing…</p>
+            <p>Key of {trial?.keyName}.</p>
+            <CueIndicator playing={runner.cuePlaying} />
           </div>
+        )}
+
+        {runner.phase === "heard" && (
+          <HeardCheck
+            cuePlaying={runner.cuePlaying}
+            onYes={runner.confirmHeard}
+            onReplay={() => void runner.replayCue()}
+          />
         )}
 
         {runner.phase === "imagine" && trial && (
@@ -184,6 +194,7 @@ export function LabScreen({
           <div className="vc-prompt" style={{ marginTop: 40 }}>
             <h3>Sing</h3>
             <p>Commit to one note. Capture stops automatically.</p>
+            <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
             {runner.tooNoisy && (
               <p className="vc-small vc-noise-warning">
                 Too noisy here — quiet singing may go unscored. Move somewhere quieter or use a closer mic.

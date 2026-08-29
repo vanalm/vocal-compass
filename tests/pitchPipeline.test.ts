@@ -23,6 +23,17 @@ describe("PitchPipeline", () => {
     expect(frame.smoothed?.hz).toBe(220);
   });
 
+  it("reports the frame's loudness even when nothing is voiced (mic-activity feedback)", () => {
+    const pipeline = new PitchPipeline(stubDetector(() => null));
+    expect(pipeline.process(buffer(0.05), SR, 0).level).toBeCloseTo(0.05, 3);
+    expect(pipeline.process(silentBuffer, SR, 70).level).toBe(0);
+  });
+
+  it("uses the estimate's rms as the level on voiced frames", () => {
+    const pipeline = new PitchPipeline(stubDetector(() => voice(0.12)));
+    expect(pipeline.process(buffer(0.12), SR, 0).level).toBeCloseTo(0.12, 5);
+  });
+
   it("emits null raw on silence and reports the noise state", () => {
     const pipeline = new PitchPipeline(stubDetector(() => null));
     const frame = pipeline.process(silentBuffer, SR, 0);

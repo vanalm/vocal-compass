@@ -7,6 +7,7 @@ import {
 } from "../../core";
 import { useTrialRunner } from "../hooks/useTrialRunner";
 import { PitchReadout } from "../components/PitchReadout";
+import { CueIndicator, HeardCheck, MicMeter } from "../components/TrialStage";
 import { TraceChart } from "../components/TraceChart";
 
 /**
@@ -149,8 +150,16 @@ export function TestScreen({
         {runner.phase === "listen" && (
           <div className="vc-prompt" style={{ marginTop: 90 }}>
             <h3>Listen</h3>
-            <p>The cue is playing…</p>
+            <CueIndicator playing={runner.cuePlaying} />
           </div>
+        )}
+
+        {runner.phase === "heard" && (
+          <HeardCheck
+            cuePlaying={runner.cuePlaying}
+            onYes={runner.confirmHeard}
+            onReplay={() => void runner.replayCue()}
+          />
         )}
 
         {runner.phase === "imagine" && (
@@ -178,6 +187,7 @@ export function TestScreen({
           <div className="vc-prompt" style={{ marginTop: 40 }}>
             <h3>Sing</h3>
             <p>Commit to one note. Capture stops automatically.</p>
+            <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
             {showLive && <PitchReadout sample={runner.liveSample} targetMidi={trial.targetMidi} />}
             <div className="vc-actions vc-center-actions">
               <button className="vc-button" onClick={runner.finish}>
@@ -219,6 +229,15 @@ export function TestScreen({
                 }
               >
                 Save and continue
+              </button>
+              <button
+                className="vc-button"
+                onClick={() => {
+                  runner.discard();
+                  beginTrial();
+                }}
+              >
+                Retry — don’t count this one
               </button>
             </div>
           </div>

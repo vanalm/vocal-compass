@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { heldExtremes, noteName, type RangeMeasurement } from "../../core";
+import { heldExtremes, noteName, type PitchSample, type RangeMeasurement } from "../../core";
+import { MicMeter } from "./TrialStage";
 import { useServices } from "../services";
 
 const MAX_PROBE_MS = 45_000;
@@ -14,6 +15,9 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
   const { microphone } = useServices();
   const [probing, setProbing] = useState(false);
   const [liveNote, setLiveNote] = useState<string | null>(null);
+  const [liveSample, setLiveSample] = useState<PitchSample | null>(null);
+  const [level, setLevel] = useState(0);
+  const [threshold, setThreshold] = useState(0.008);
   const [captured, setCaptured] = useState<{ lowMidi: number; highMidi: number } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const buffer = useRef<Array<number | null>>([]);
@@ -25,6 +29,9 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
       onSample: (frame) => {
         buffer.current.push(frame.smoothed?.midi ?? null);
         setLiveNote(frame.smoothed ? noteName(frame.smoothed.midi) : null);
+        setLiveSample(frame.smoothed);
+        setLevel(frame.level);
+        setThreshold(frame.noise.threshold);
         setCaptured(heldExtremes(buffer.current));
       },
       onStatus: (status, error) => {
@@ -83,6 +90,7 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
           <p className="vc-small">
             Siren gently: middle → lowest comfortable → highest comfortable. Hold each end a beat.
           </p>
+          <MicMeter level={level} threshold={threshold} sample={liveSample} />
           <p className="vc-range-live">
             {liveNote ?? "·"}
             {captured && (

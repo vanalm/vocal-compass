@@ -21,7 +21,7 @@ export interface RunnerSettings {
   feedbackMode: FeedbackMode;
 }
 
-export type RunnerPhase = "idle" | "listen" | "imagine" | "sing" | "review";
+export type RunnerPhase = "idle" | "listen" | "heard" | "imagine" | "sing" | "review";
 
 const SING_WINDOW_MS = 4000;
 
@@ -37,12 +37,15 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
   const singTimer = useRef<number | null>(null);
 
   const [phase, setPhase] = useState<RunnerPhase>("idle");
+  const [cuePlaying, setCuePlaying] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [remainingDelayMs, setRemainingDelayMs] = useState(0);
   const [liveSample, setLiveSample] = useState<PitchSample | null>(null);
   const [micStatus, setMicStatus] = useState<MicStatus>("idle");
   const [micError, setMicError] = useState<string | null>(null);
   const [tooNoisy, setTooNoisy] = useState(false);
+  const [inputLevel, setInputLevel] = useState(0);
+  const [noiseThreshold, setNoiseThreshold] = useState(0.008);
   const [analysis, setAnalysis] = useState<AttemptAnalysis | null>(null);
   const [lost, setLost] = useState(false);
   const [hintLevel, setHintLevel] = useState(0);
@@ -52,6 +55,8 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
       onSample: (frame) => {
         setLiveSample(frame.smoothed);
         setTooNoisy(frame.noise.tooNoisy);
+        setInputLevel(frame.level);
+        setNoiseThreshold(frame.noise.threshold);
         sessionRef.current?.addFrame(frame);
       },
       onStatus: (status, error) => {
@@ -84,26 +89,48 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
 
       setPhase("listen");
       session.beginListening();
+      setCuePlaying(true);
       await cues.playCadence(trial.tonicMidi);
       await cues.playSequence(plan.contextMidis);
-      session.beginImagining();
-      setPhase("imagine");
-
-      if (trial.delayMs > 0) {
-        setRemainingDelayMs(trial.delayMs);
-        const startedAt = Date.now();
-        const tick = () => {
-          const left = trial.delayMs - (Date.now() - startedAt);
-          setRemainingDelayMs(Math.max(0, left));
-          if (left > 0) window.setTimeout(tick, 100);
-        };
-        tick();
-      } else {
-        setRemainingDelayMs(0);
-      }
+      setCuePlaying(false);
+      // Stop here: the user confirms they heard the cue before the trial
+      // moves on — a missed cue becomes a replay, not a doomed attempt.
+      setPhase("heard");
     },
     [cues],
   );
+
+  /** Replay the whole cue from the heard-check, as often as needed. */
+  const replayCue = useCallback(async () => {
+    const session = sessionRef.current;
+    const plan = planRef.current;
+    if (!session || !plan || cuePlaying) return;
+    setCuePlaying(true);
+    await cues.playCadence(session.definition.tonicMidi);
+    await cues.playSequence(plan.contextMidis);
+    setCuePlaying(false);
+  }, [cues, cuePlaying]);
+
+  /** The user heard the cue: begin imagining (and the retention delay). */
+  const confirmHeard = useCallback(() => {
+    const session = sessionRef.current;
+    if (!session || cuePlaying) return;
+    session.beginImagining();
+    setPhase("imagine");
+    const delayMs = session.definition.delayMs;
+    if (delayMs > 0) {
+      setRemainingDelayMs(delayMs);
+      const startedAt = Date.now();
+      const tick = () => {
+        const left = delayMs - (Date.now() - startedAt);
+        setRemainingDelayMs(Math.max(0, left));
+        if (left > 0) window.setTimeout(tick, 100);
+      };
+      tick();
+    } else {
+      setRemainingDelayMs(0);
+    }
+  }, [cuePlaying]);
 
   const sing = useCallback(async () => {
     const session = sessionRef.current;
@@ -171,6 +198,9 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
 
   return {
     phase,
+    cuePlaying,
+    inputLevel,
+    noiseThreshold,
     prompt,
     remainingDelayMs,
     liveSample,
@@ -182,6 +212,8 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
     hintLevel,
     session: sessionRef.current,
     start,
+    replayCue,
+    confirmHeard,
     sing,
     finish,
     markLost,
