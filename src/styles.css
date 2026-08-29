@@ -234,3 +234,4 @@ button { cursor: pointer; }
 .vc-howto-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
 .vc-howto-steps strong { color: #8ce8bd; font-size: 13px; }
 .vc-howto-steps p { color: #748b82; font-size: 12px; line-height: 1.5; margin: 6px 0 0; }
+.vc-heatmap-residual { font-size: 9px; color: #5b7d70; }

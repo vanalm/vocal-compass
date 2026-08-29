@@ -13,7 +13,13 @@ export function RegisterHeatMap({ zones }: { zones: PitchZone[] }) {
           title={
             zone.accuracy == null
               ? `${zone.label}: no scored trials`
-              : `${zone.label}: ${Math.round(zone.accuracy * 100)}% of ${zone.scored}`
+              : `${zone.label}: ${Math.round(zone.accuracy * 100)}% of ${zone.scored}` +
+                (zone.medianResidualCents != null
+                  ? ` · residual ${Math.round(zone.medianResidualCents)}¢`
+                  : "") +
+                (zone.medianStabilityCents != null
+                  ? ` · wobble ${Math.round(zone.medianStabilityCents)}¢`
+                  : "")
           }
         >
           <div
@@ -25,6 +31,9 @@ export function RegisterHeatMap({ zones }: { zones: PitchZone[] }) {
             }
           />
           <span>{noteName(zone.lowMidi)}</span>
+          {zone.medianResidualCents != null && (
+            <span className="vc-heatmap-residual">{Math.round(zone.medianResidualCents)}¢</span>
+          )}
         </div>
       ))}
     </div>

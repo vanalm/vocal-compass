@@ -2,10 +2,18 @@ import { describe, expect, it } from "vitest";
 import { pitchZones } from "../src/core/kpi/pitchZones";
 import type { TrialRecord } from "../src/core/types";
 
-function trial(targetMidi: number, ok: boolean, scored = true): TrialRecord {
+function trial(
+  targetMidi: number,
+  ok: boolean,
+  scored = true,
+  extras: Partial<TrialRecord> = {},
+): TrialRecord {
   return {
     scored,
     destinationMatch: ok,
+    targetErrorCents: null,
+    stabilityCents: null,
+    ...extras,
     definition: { targetMidi },
   } as unknown as TrialRecord;
 }
@@ -38,6 +46,23 @@ describe("pitchZones", () => {
   it("labels zones with note names", () => {
     const [zone] = pitchZones([trial(60, true)]);
     expect(zone.label).toContain("C4");
+  });
+
+  it("reports median residual and stability per zone for frequency analysis", () => {
+    const zones = pitchZones([
+      trial(60, true, true, { targetErrorCents: 20, stabilityCents: 10 }),
+      trial(60, true, true, { targetErrorCents: 40, stabilityCents: 30 }),
+      trial(60, true, true, { targetErrorCents: 60, stabilityCents: 50 }),
+      trial(60, false, true, { targetErrorCents: 300, stabilityCents: 90 }), // miss: residual excluded, stability counted
+    ]);
+    expect(zones[0].medianResidualCents).toBe(40); // correct targets only
+    expect(zones[0].medianStabilityCents).toBe(40); // all scored trials
+  });
+
+  it("reports null medians when nothing measurable landed in a zone", () => {
+    const zones = pitchZones([trial(60, false)]);
+    expect(zones[0].medianResidualCents).toBeNull();
+    expect(zones[0].medianStabilityCents).toBeNull();
   });
 
   it("ignores unscored trials in occupied zones", () => {

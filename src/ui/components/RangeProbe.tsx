@@ -21,6 +21,7 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
   const [captured, setCaptured] = useState<{ lowMidi: number; highMidi: number } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const buffer = useRef<Array<number | null>>([]);
+  const sweep = useRef<Array<{ t: number; midi: number; clarity: number }>>([]);
   const stopTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -28,6 +29,13 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
     const unsubscribe = microphone.subscribe({
       onSample: (frame) => {
         buffer.current.push(frame.smoothed?.midi ?? null);
+        if (frame.smoothed) {
+          sweep.current.push({
+            t: frame.smoothed.at,
+            midi: frame.smoothed.midi,
+            clarity: frame.smoothed.clarity,
+          });
+        }
         setLiveNote(frame.smoothed ? noteName(frame.smoothed.midi) : null);
         setLiveSample(frame.smoothed);
         setLevel(frame.level);
@@ -52,6 +60,7 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
 
   const begin = () => {
     buffer.current = [];
+    sweep.current = [];
     setCaptured(null);
     setMessage(null);
     setProbing(true);
@@ -71,6 +80,7 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
       createdAt: new Date().toISOString(),
       lowMidi: extremes.lowMidi,
       highMidi: extremes.highMidi,
+      trace: sweep.current,
     });
     setMessage(
       `Saved: ${noteName(extremes.lowMidi)} – ${noteName(extremes.highMidi)} (${(

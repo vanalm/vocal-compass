@@ -90,6 +90,9 @@ export interface RangeMeasurement {
   createdAt: string;
   lowMidi: number;
   highMidi: number;
+  /** The full smoothed sweep, kept for per-frequency analysis over time.
+   * Optional: pre-existing measurements have no trace. */
+  trace?: Array<{ t: number; midi: number; clarity: number }>;
 }
 
 /** One completed guided exercise session (e.g. a VFE run on the Range screen). */

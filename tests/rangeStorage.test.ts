@@ -10,6 +10,7 @@ const measurement = (id: string, createdAt: string): RangeMeasurement => ({
   createdAt,
   lowMidi: 45.2,
   highMidi: 69.8,
+  trace: [{ t: 0, midi: 50, clarity: 0.9 }],
 });
 
 function repositoryCases(): Array<[string, () => TrialRepository]> {
@@ -49,6 +50,14 @@ describe("range measurement storage", () => {
     );
     expect(imported).toBe(0);
     expect(await repo.ranges()).toEqual([]);
+  });
+
+  it.each(repositoryCases())("%s: the probe sweep trace round-trips intact", async (_, make) => {
+    const repo = make();
+    await repo.saveRange(measurement("a", "2026-08-20T10:00:00.000Z"));
+    const restored = make();
+    await restored.importJson(await repo.exportJson());
+    expect((await restored.ranges())[0].trace).toEqual([{ t: 0, midi: 50, clarity: 0.9 }]);
   });
 
   it.each(repositoryCases())("%s: clear removes measurements too", async (_, make) => {
