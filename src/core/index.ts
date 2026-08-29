@@ -9,6 +9,15 @@ export { Exercise } from "./exercises/Exercise";
 export type { CuePlan, TrialRequest, Difficulty } from "./exercises/Exercise";
 export { exercises } from "./exercises/registry";
 export { baselineTestPlan, testProgress } from "./protocol/testPlan";
+export {
+  vocalFunctionExercises,
+  rangeChangeVerdict,
+  MEANINGFUL_RANGE_CHANGE_ST,
+  MEASUREMENT_DRIFT_ST,
+} from "./protocol/rangePlan";
+export type { RangePlan, RangeStep, RangeVerdict } from "./protocol/rangePlan";
+export { nextActions } from "./protocol/nextActions";
+export type { Lane, LaneStatus } from "./protocol/nextActions";
 export type { TestPlan, TestStep, TestProgress } from "./protocol/testPlan";
 export type { PitchDetector, PitchEstimate } from "./pitch/PitchDetector";
 export { AutocorrelationDetector } from "./pitch/AutocorrelationDetector";

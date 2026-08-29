@@ -202,3 +202,20 @@ button { cursor: pointer; }
 .vc-testbar i { display: block; height: 100%; background: #53d69e; transition: width .3s ease; }
 .vc-test-what { font-size: 17px; color: #eef6f2; max-width: 560px; margin: 6px auto 0; }
 .vc-test-why { font-size: 13px; color: #8fa69e; max-width: 560px; margin: 8px auto 0; }
+.vc-nextup { display: grid; gap: 10px; }
+.vc-nextup-main { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.vc-nextup-title { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vc-overdue { font-style: normal; font-size: 11px; font-weight: 800; color: #ffd6ad; background: #2b2118; border: 1px solid #65472c; border-radius: 999px; padding: 3px 9px; }
+.vc-nextup-rest { display: flex; gap: 8px; flex-wrap: wrap; }
+.vc-chip { border: 1px solid #29443a; background: #10201a; color: #8fa69e; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; }
+.vc-chip.due { border-color: #65472c; color: #ffd6ad; }
+.vc-vfe-steps { display: grid; gap: 12px; margin-top: 12px; }
+.vc-vfe-step { border: 1px solid #1d332a; border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; }
+.vc-vfe-step.done { border-color: #53d69e; opacity: 0.75; }
+.vc-vfe-step .vc-test-what, .vc-vfe-step .vc-test-why { margin: 0; max-width: none; text-align: left; }
+.vc-vfe-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.vc-vfe-step .vc-button { justify-self: start; }
+.vc-evidence { font-size: 11px; color: #5b7d70; margin: 0; }
+.vc-verdict-good { color: #53d69e; }
+.vc-verdict-bad { color: #ffbdc5; }
+.vc-verdict-flat { color: #748b82; }

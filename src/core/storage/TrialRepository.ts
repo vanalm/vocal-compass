@@ -1,11 +1,12 @@
-import type { RangeMeasurement, TrialRecord } from "../types";
+import type { ExerciseSession, RangeMeasurement, TrialRecord } from "../types";
 
-/** Export payload shape; version 2 added range measurements. */
+/** Export payload shape; v2 added ranges, v3 exercise sessions. */
 export interface ExportPayload {
   app: string;
   version: number;
   trials: TrialRecord[];
   ranges: RangeMeasurement[];
+  sessions: ExerciseSession[];
 }
 
 /**
@@ -18,24 +19,35 @@ export interface TrialRepository {
   all(): Promise<TrialRecord[]>;
   saveRange(measurement: RangeMeasurement): Promise<void>;
   ranges(): Promise<RangeMeasurement[]>;
+  saveSession(session: ExerciseSession): Promise<void>;
+  sessions(): Promise<ExerciseSession[]>;
   clear(): Promise<void>;
   exportJson(): Promise<string>;
   importJson(json: string): Promise<number>;
 }
 
-export function buildExportJson(trials: TrialRecord[], ranges: RangeMeasurement[]): string {
-  const payload: ExportPayload = { app: "vocal-compass", version: 2, trials, ranges };
+export function buildExportJson(
+  trials: TrialRecord[],
+  ranges: RangeMeasurement[],
+  sessions: ExerciseSession[],
+): string {
+  const payload: ExportPayload = { app: "vocal-compass", version: 3, trials, ranges, sessions };
   return JSON.stringify(payload, null, 2);
 }
 
-export function parseImportJson(json: string): { trials: TrialRecord[]; ranges: RangeMeasurement[] } {
+export function parseImportJson(json: string): {
+  trials: TrialRecord[];
+  ranges: RangeMeasurement[];
+  sessions: ExerciseSession[];
+} {
   const parsed = JSON.parse(json) as Partial<ExportPayload>;
-  return { trials: parsed.trials ?? [], ranges: parsed.ranges ?? [] };
+  return { trials: parsed.trials ?? [], ranges: parsed.ranges ?? [], sessions: parsed.sessions ?? [] };
 }
 
 export class MemoryTrialRepository implements TrialRepository {
   private records: TrialRecord[] = [];
   private measurements: RangeMeasurement[] = [];
+  private exerciseSessions: ExerciseSession[] = [];
 
   async save(record: TrialRecord): Promise<void> {
     this.records = this.records.filter((r) => r.id !== record.id);
@@ -55,19 +67,30 @@ export class MemoryTrialRepository implements TrialRepository {
     return [...this.measurements].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  async saveSession(session: ExerciseSession): Promise<void> {
+    this.exerciseSessions = this.exerciseSessions.filter((s) => s.id !== session.id);
+    this.exerciseSessions.push(session);
+  }
+
+  async sessions(): Promise<ExerciseSession[]> {
+    return [...this.exerciseSessions].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
   async clear(): Promise<void> {
     this.records = [];
     this.measurements = [];
+    this.exerciseSessions = [];
   }
 
   async exportJson(): Promise<string> {
-    return buildExportJson(await this.all(), await this.ranges());
+    return buildExportJson(await this.all(), await this.ranges(), await this.sessions());
   }
 
   async importJson(json: string): Promise<number> {
-    const { trials, ranges } = parseImportJson(json);
+    const { trials, ranges, sessions } = parseImportJson(json);
     for (const t of trials) await this.save(t);
     for (const r of ranges) await this.saveRange(r);
-    return trials.length + ranges.length;
+    for (const x of sessions) await this.saveSession(x);
+    return trials.length + ranges.length + sessions.length;
   }
 }

@@ -92,6 +92,15 @@ export interface RangeMeasurement {
   highMidi: number;
 }
 
+/** One completed guided exercise session (e.g. a VFE run on the Range screen). */
+export interface ExerciseSession {
+  id: string;
+  createdAt: string;
+  /** Which plan was run, e.g. "vfe". */
+  planId: string;
+  stepsCompleted: number;
+}
+
 export interface KpiSummary {
   total: number;
   scored: number;

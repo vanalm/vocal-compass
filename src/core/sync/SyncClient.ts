@@ -1,5 +1,5 @@
 import type { TrialRepository } from "../storage/TrialRepository";
-import type { RangeMeasurement, TrialRecord } from "../types";
+import type { ExerciseSession, RangeMeasurement, TrialRecord } from "../types";
 
 export interface KeyValueStore {
   get(key: string): string | null;
@@ -61,10 +61,11 @@ export class SyncClient {
 
     const trials = await repo.all();
     const ranges = await repo.ranges();
+    const sessions = await repo.sessions();
     const response = await this.fetchFn(`${this.baseUrl}/sync`, {
       method: "POST",
       headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ trials, ranges }),
+      body: JSON.stringify({ trials, ranges, sessions }),
     });
     if (response.status === 401) {
       this.signOut();
@@ -72,7 +73,11 @@ export class SyncClient {
     }
     if (!response.ok) throw new Error(`Sync failed (${response.status}).`);
 
-    const body = (await response.json()) as { trials: TrialRecord[]; ranges: RangeMeasurement[] };
+    const body = (await response.json()) as {
+      trials: TrialRecord[];
+      ranges: RangeMeasurement[];
+      sessions?: ExerciseSession[];
+    };
     let pulled = 0;
     const localTrialIds = new Set(trials.map((t) => t.id));
     for (const t of body.trials) {
@@ -86,7 +91,13 @@ export class SyncClient {
       await repo.saveRange(r);
       pulled += 1;
     }
-    return { pushed: trials.length + ranges.length, pulled };
+    const localSessionIds = new Set(sessions.map((s) => s.id));
+    for (const x of body.sessions ?? []) {
+      if (localSessionIds.has(x.id)) continue;
+      await repo.saveSession(x);
+      pulled += 1;
+    }
+    return { pushed: trials.length + ranges.length + sessions.length, pulled };
   }
 
   private async post(path: string, payload: unknown): Promise<Record<string, unknown>> {

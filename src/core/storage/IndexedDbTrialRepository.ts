@@ -1,8 +1,9 @@
-import type { RangeMeasurement, TrialRecord } from "../types";
+import type { ExerciseSession, RangeMeasurement, TrialRecord } from "../types";
 import { buildExportJson, parseImportJson, type TrialRepository } from "./TrialRepository";
 
 const DB_NAME = "vocal-compass";
-const DB_VERSION = 2; // v2: added the ranges store
+const DB_VERSION = 3; // v2: ranges store; v3: sessions store
+const SESSIONS = "sessions";
 const TRIALS = "trials";
 const RANGES = "ranges";
 
@@ -25,6 +26,10 @@ export class IndexedDbTrialRepository implements TrialRepository {
           }
           if (!db.objectStoreNames.contains(RANGES)) {
             const store = db.createObjectStore(RANGES, { keyPath: "id" });
+            store.createIndex("createdAt", "createdAt");
+          }
+          if (!db.objectStoreNames.contains(SESSIONS)) {
+            const store = db.createObjectStore(SESSIONS, { keyPath: "id" });
             store.createIndex("createdAt", "createdAt");
           }
         };
@@ -67,19 +72,30 @@ export class IndexedDbTrialRepository implements TrialRepository {
     return records.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  async saveSession(session: ExerciseSession): Promise<void> {
+    await this.tx(SESSIONS, "readwrite", (store) => store.put(session));
+  }
+
+  async sessions(): Promise<ExerciseSession[]> {
+    const rows = await this.tx<ExerciseSession[]>(SESSIONS, "readonly", (store) => store.getAll());
+    return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
   async clear(): Promise<void> {
     await this.tx(TRIALS, "readwrite", (store) => store.clear());
     await this.tx(RANGES, "readwrite", (store) => store.clear());
+    await this.tx(SESSIONS, "readwrite", (store) => store.clear());
   }
 
   async exportJson(): Promise<string> {
-    return buildExportJson(await this.all(), await this.ranges());
+    return buildExportJson(await this.all(), await this.ranges(), await this.sessions());
   }
 
   async importJson(json: string): Promise<number> {
-    const { trials, ranges } = parseImportJson(json);
+    const { trials, ranges, sessions } = parseImportJson(json);
     for (const t of trials) await this.save(t);
     for (const r of ranges) await this.saveRange(r);
-    return trials.length + ranges.length;
+    for (const x of sessions) await this.saveSession(x);
+    return trials.length + ranges.length + sessions.length;
   }
 }

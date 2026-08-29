@@ -73,6 +73,8 @@ class AuthVerifyBody(BaseModel):
 class SyncBody(BaseModel):
     trials: list[dict]
     ranges: list[dict]
+    # Absent from pre-v3 clients; defaulting keeps them syncing.
+    sessions: list[dict] = []
 
 
 def now() -> datetime:
@@ -182,7 +184,11 @@ def create_app(
     def sync(
         body: SyncBody, user: User = Depends(current_user), session: Session = Depends(db)
     ) -> dict:
-        for kind, records in (("trial", body.trials), ("range", body.ranges)):
+        for kind, records in (
+            ("trial", body.trials),
+            ("range", body.ranges),
+            ("session", body.sessions),
+        ):
             for payload in records:
                 record_id = str(payload.get("id", ""))
                 if not record_id:
@@ -208,7 +214,7 @@ def create_app(
             ).all()
             return [r.payload for r in rows]
 
-        return {"trials": all_of("trial"), "ranges": all_of("range")}
+        return {"trials": all_of("trial"), "ranges": all_of("range"), "sessions": all_of("session")}
 
     @app.delete("/data")
     def delete_data(user: User = Depends(current_user), session: Session = Depends(db)) -> dict:

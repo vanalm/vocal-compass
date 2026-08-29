@@ -1,29 +1,34 @@
 import {
   exercises,
+  nextActions,
   noteName,
   pitchZones,
   practiceDays,
+  type ExerciseSession,
+  type Lane,
   type RangeMeasurement,
   type TrialRecord,
 } from "../../core";
 import { useServices } from "../services";
 import { KpiCards } from "../components/KpiCards";
-import { RangeProbe } from "../components/RangeProbe";
 import { AccountCard } from "../components/AccountCard";
+import { NextUpCard } from "../components/NextUpCard";
 import { ImprovementCard } from "../components/ImprovementCard";
 import { PracticeChart, RangeChart, RegisterHeatMap } from "../components/ProgressCharts";
 
 export function ProgressScreen({
   trials,
   ranges,
-  onSaveRange,
+  sessions,
+  onGo,
   onSynced,
   onExport,
   onClear,
 }: {
   trials: TrialRecord[];
   ranges: RangeMeasurement[];
-  onSaveRange: (m: RangeMeasurement) => Promise<void>;
+  sessions: ExerciseSession[];
+  onGo: (lane: Lane) => void;
   onSynced: () => Promise<void>;
   onExport: () => void;
   onClear: () => void;
@@ -39,8 +44,14 @@ export function ProgressScreen({
     ...ranges.map((r) => r.createdAt),
   ]);
 
+  const lanes = nextActions(new Date(), trials, ranges, sessions);
+
   return (
     <div className="vc-grid">
+      <section className="vc-card vc-side" style={{ gridColumn: "span 12" }}>
+        <NextUpCard lanes={lanes} onGo={onGo} />
+      </section>
+
       <section className="vc-card vc-side" style={{ gridColumn: "span 12" }}>
         <div className="vc-section-title">
           <h3>Overall</h3>
@@ -76,7 +87,6 @@ export function ProgressScreen({
             </div>
           </div>
           <RangeChart ranges={ranges} />
-          <RangeProbe onSave={onSaveRange} />
         </section>
 
         <section className="vc-card vc-chart-card">

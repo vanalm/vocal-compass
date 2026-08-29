@@ -89,6 +89,26 @@ describe("SyncClient", () => {
     expect((await repo.ranges()).map((r) => r.id)).toEqual(["server-r1"]);
   });
 
+  it("pushes local sessions and imports server-only sessions", async () => {
+    await signIn();
+    await repo.saveSession({ id: "sx", createdAt: "2026-09-01T10:00:00.000Z", planId: "vfe", stepsCompleted: 4 });
+    fetchFn.mockResolvedValueOnce(
+      jsonResponse(200, {
+        trials: [],
+        ranges: [],
+        sessions: [
+          { id: "sx", createdAt: "2026-09-01T10:00:00.000Z", planId: "vfe", stepsCompleted: 4 },
+          { id: "sy", createdAt: "2026-09-02T10:00:00.000Z", planId: "vfe", stepsCompleted: 4 },
+        ],
+      }),
+    );
+    const result = await client.sync(repo);
+    const [, init] = fetchFn.mock.calls[2];
+    expect(JSON.parse(init.body).sessions.map((s: { id: string }) => s.id)).toEqual(["sx"]);
+    expect(result).toEqual({ pushed: 1, pulled: 1 });
+    expect((await repo.sessions()).map((s) => s.id)).toEqual(["sx", "sy"]);
+  });
+
   it("second sync does not duplicate already-pulled records", async () => {
     await signIn();
     const payload = { trials: [trial("server-1")], ranges: [] };

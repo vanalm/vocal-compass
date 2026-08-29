@@ -142,3 +142,23 @@ class TestHealth:
     def test_root_leaks_no_secrets(self, client):
         client.post("/auth/request", json={"email": "a@b.c"})
         assert "code" not in client.get("/").text.lower()
+
+
+class TestSessionSync:
+    def test_sessions_round_trip(self, client):
+        headers = sign_in(client)
+        pushed = client.post(
+            "/sync",
+            json={"trials": [], "ranges": [], "sessions": [
+                {"id": "x1", "createdAt": "2026-09-01T10:00:00.000Z", "planId": "vfe", "stepsCompleted": 4}
+            ]},
+            headers=headers,
+        )
+        assert pushed.status_code == 200
+        assert [s["id"] for s in pushed.json()["sessions"]] == ["x1"]
+
+    def test_old_clients_without_sessions_field_still_sync(self, client):
+        headers = sign_in(client)
+        response = client.post("/sync", json={"trials": [trial("t1")], "ranges": []}, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["sessions"] == []

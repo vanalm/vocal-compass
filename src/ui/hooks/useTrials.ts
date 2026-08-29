@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { RangeMeasurement, TrialRecord } from "../../core";
+import type { ExerciseSession, RangeMeasurement, TrialRecord } from "../../core";
 import { useServices } from "../services";
 
 /** Loads all persisted trials + range measurements and exposes save/clear/export. */
@@ -7,11 +7,13 @@ export function useTrials() {
   const { repository } = useServices();
   const [trials, setTrials] = useState<TrialRecord[]>([]);
   const [ranges, setRanges] = useState<RangeMeasurement[]>([]);
+  const [sessions, setSessions] = useState<ExerciseSession[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     setTrials(await repository.all());
     setRanges(await repository.ranges());
+    setSessions(await repository.sessions());
     setLoaded(true);
   }, [repository]);
 
@@ -35,6 +37,14 @@ export function useTrials() {
     [repository, refresh],
   );
 
+  const saveSession = useCallback(
+    async (session: ExerciseSession) => {
+      await repository.saveSession(session);
+      await refresh();
+    },
+    [repository, refresh],
+  );
+
   const clear = useCallback(async () => {
     await repository.clear();
     await refresh();
@@ -51,5 +61,5 @@ export function useTrials() {
     URL.revokeObjectURL(url);
   }, [repository]);
 
-  return { trials, ranges, loaded, save, saveRange, clear, exportJson, refresh };
+  return { trials, ranges, sessions, loaded, save, saveRange, saveSession, clear, exportJson, refresh };
 }
