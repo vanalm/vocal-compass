@@ -127,6 +127,15 @@ def create_app(
             raise HTTPException(401, "Invalid or expired session.")
         return session.get(User, auth.user_id)
 
+    @app.get("/")
+    def health() -> dict:
+        """Liveness probe: the bare base URL should say the server is up.
+
+        dev_mode mirrors echo_codes so a deployment that is still handing out
+        sign-in codes in its responses is visible at a glance.
+        """
+        return {"app": "vocal-compass-sync", "ok": True, "dev_mode": echo_codes, "docs": "/docs"}
+
     @app.post("/auth/request")
     def auth_request(body: AuthRequestBody, session: Session = Depends(db)) -> dict:
         email = body.email.strip().lower()

@@ -129,3 +129,16 @@ class TestCodeEcho:
             requested = client.post("/auth/request", json={"email": "a@b.c"})
             assert requested.status_code == 200
             assert "dev_code" not in requested.json()
+
+
+class TestHealth:
+    def test_root_reports_alive_without_auth(self, client):
+        response = client.get("/")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["app"] == "vocal-compass-sync"
+        assert body["ok"] is True
+
+    def test_root_leaks_no_secrets(self, client):
+        client.post("/auth/request", json={"email": "a@b.c"})
+        assert "code" not in client.get("/").text.lower()
