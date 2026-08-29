@@ -80,7 +80,7 @@ export interface TrialRecord extends AttemptAnalysis {
   confidenceBefore: number;
   effort: number;
   register: RegisterLabel;
-  trace: Array<{ t: number; midi: number; clarity: number }>;
+  trace: Array<{ t: number; midi: number; clarity: number; rms?: number }>;
   createdAt: string;
 }
 
@@ -92,7 +92,7 @@ export interface RangeMeasurement {
   highMidi: number;
   /** The full smoothed sweep, kept for per-frequency analysis over time.
    * Optional: pre-existing measurements have no trace. */
-  trace?: Array<{ t: number; midi: number; clarity: number }>;
+  trace?: Array<{ t: number; midi: number; clarity: number; rms?: number }>;
 }
 
 /** One completed guided exercise session (e.g. a VFE run on the Range screen). */

@@ -12,7 +12,7 @@ import {
 } from "../../core";
 import { useTrialRunner, type RunnerSettings } from "../hooks/useTrialRunner";
 import { PitchReadout } from "../components/PitchReadout";
-import { CueIndicator, HeardCheck, MicMeter } from "../components/TrialStage";
+import { CueIndicator, FlowModeToggle, HeardCheck, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
 import { TraceChart } from "../components/TraceChart";
 
 const DELAYS = [0, 2000, 5000, 8000];
@@ -62,6 +62,20 @@ export function LabScreen({
     setIntent(null);
     setShowRescue(false);
   };
+
+  const primaryAction =
+    runner.phase === "idle"
+      ? begin
+      : runner.phase === "heard" && !runner.cuePlaying
+        ? runner.confirmHeard
+        : runner.phase === "imagine" && runner.remainingDelayMs <= 0
+          ? () => void runner.sing()
+          : runner.phase === "sing"
+            ? runner.finish
+            : runner.phase === "review"
+              ? saveTrial
+              : null;
+  useSpacebarAdvance(primaryAction);
 
   return (
     <div className="vc-lab-layout">
@@ -136,6 +150,7 @@ export function LabScreen({
       <section className="vc-card vc-stage">
         <div className="vc-stage-head">
           <span className="vc-phase">{runner.phase === "idle" ? "ready" : runner.phase}</span>
+          <FlowModeToggle mode={runner.flowMode} onChange={runner.setFlowMode} />
           <span className={`vc-mic ${runner.micStatus === "live" ? "live" : ""}`}>
             ● mic {runner.micStatus}
           </span>

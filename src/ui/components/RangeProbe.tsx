@@ -21,7 +21,7 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
   const [captured, setCaptured] = useState<{ lowMidi: number; highMidi: number } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const buffer = useRef<Array<number | null>>([]);
-  const sweep = useRef<Array<{ t: number; midi: number; clarity: number }>>([]);
+  const sweep = useRef<Array<{ t: number; midi: number; clarity: number; rms?: number }>>([]);
   const stopTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -34,6 +34,7 @@ export function RangeProbe({ onSave }: { onSave: (m: RangeMeasurement) => Promis
             t: frame.smoothed.at,
             midi: frame.smoothed.midi,
             clarity: frame.smoothed.clarity,
+            rms: frame.smoothed.rms,
           });
         }
         setLiveNote(frame.smoothed ? noteName(frame.smoothed.midi) : null);

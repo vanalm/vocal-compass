@@ -7,7 +7,7 @@ import {
 } from "../../core";
 import { useTrialRunner } from "../hooks/useTrialRunner";
 import { PitchReadout } from "../components/PitchReadout";
-import { CueIndicator, HeardCheck, MicMeter } from "../components/TrialStage";
+import { CueIndicator, FlowModeToggle, HeardCheck, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
 import { TraceChart } from "../components/TraceChart";
 
 /**
@@ -33,6 +33,7 @@ export function TestScreen({
   });
 
   const progress = testProgress(plan, completed);
+
   const justAdvanced =
     progress != null && progress.doneInStep === 0 && completed > 0 && runner.phase === "idle";
 
@@ -49,6 +50,23 @@ export function TestScreen({
       3,
     );
   };
+
+  // One key advances the whole trial. Computed before the finished-state
+  // return so the hook runs on every render.
+  const primaryAction = !progress
+    ? null
+    : runner.phase === "idle"
+      ? beginTrial
+      : runner.phase === "heard" && !runner.cuePlaying
+        ? runner.confirmHeard
+        : runner.phase === "imagine" && runner.remainingDelayMs <= 0
+          ? () => void runner.sing()
+          : runner.phase === "sing"
+            ? runner.finish
+            : runner.phase === "review"
+              ? () => void runner.complete({ intent: null, effort: 2, register: "unknown" })
+              : null;
+  useSpacebarAdvance(primaryAction);
 
   if (!progress) {
     return (
@@ -103,6 +121,7 @@ export function TestScreen({
       <section className="vc-card vc-stage" style={{ gridColumn: "span 12" }}>
         <div className="vc-stage-head">
           <span className="vc-phase">{runner.phase === "idle" ? "ready" : runner.phase}</span>
+          <FlowModeToggle mode={runner.flowMode} onChange={runner.setFlowMode} />
           <span className={`vc-mic ${runner.micStatus === "live" ? "live" : ""}`}>
             ● mic {runner.micStatus}
           </span>
@@ -124,7 +143,7 @@ export function TestScreen({
             <p className="vc-test-what">{progress.step.what}</p>
             <p className="vc-test-why">{progress.step.why}</p>
             <p className="vc-small" style={{ marginTop: 10 }}>
-              {progress.step.trialCount} trials · blind · use headphones.
+              {progress.step.trialCount} trials · blind · use headphones · spacebar advances.
             </p>
             <div className="vc-actions vc-center-actions">
               <button className="vc-button primary" onClick={beginTrial}>

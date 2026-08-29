@@ -88,3 +88,17 @@ describe("TrialSession state machine", () => {
     expect(session.currentAnalysis?.scored).toBe(false);
   });
 });
+
+describe("volume data in the trace", () => {
+  it("keeps each sample's rms so loudness is analyzable later", () => {
+    const now = { t: 1000 };
+    const session = makeSession(now);
+    session.beginListening();
+    session.beginImagining();
+    session.beginSinging();
+    session.addSample({ at: 1200, hz: 220, midi: 57, clarity: 0.9, rms: 0.042 });
+    session.finishSinging();
+    const record = session.toRecord();
+    expect(record.trace[0].rms).toBeCloseTo(0.042, 5);
+  });
+});

@@ -49,8 +49,8 @@ export class TrialSession {
   }
 
   /** Captured pitch trace, for review visualisations. */
-  get trace(): Array<{ t: number; midi: number; clarity: number }> {
-    return this.samples.map((s) => ({ t: s.at, midi: s.midi, clarity: s.clarity }));
+  get trace(): Array<{ t: number; midi: number; clarity: number; rms?: number }> {
+    return this.samples.map((s) => ({ t: s.at, midi: s.midi, clarity: s.clarity, rms: s.rms }));
   }
 
   /** Live pitch is only shown to the user when the mode allows it. */

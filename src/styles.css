@@ -235,3 +235,5 @@ button { cursor: pointer; }
 .vc-howto-steps strong { color: #8ce8bd; font-size: 13px; }
 .vc-howto-steps p { color: #748b82; font-size: 12px; line-height: 1.5; margin: 6px 0 0; }
 .vc-heatmap-residual { font-size: 9px; color: #5b7d70; }
+.vc-flowmode { display: inline-flex; }
+.vc-flowmode button { padding: 5px 12px; font-size: 11px; }

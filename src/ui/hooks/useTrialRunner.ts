@@ -23,7 +23,21 @@ export interface RunnerSettings {
 
 export type RunnerPhase = "idle" | "listen" | "heard" | "imagine" | "sing" | "review";
 
+/** click = explicit gates between phases; auto = flows once it's go time. */
+export type FlowMode = "click" | "auto";
+
 const SING_WINDOW_MS = 4000;
+/** Auto mode: breath-length beat between "cue done" and capture start. */
+const AUTO_BEAT_MS = 900;
+const FLOW_MODE_KEY = "vc-flow-mode";
+
+function loadFlowMode(): FlowMode {
+  try {
+    return window.localStorage.getItem(FLOW_MODE_KEY) === "auto" ? "auto" : "click";
+  } catch {
+    return "click";
+  }
+}
 
 /**
  * Orchestrates one trial at a time: cue playback, the silent delay,
@@ -37,6 +51,10 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
   const singTimer = useRef<number | null>(null);
 
   const [phase, setPhase] = useState<RunnerPhase>("idle");
+  const [flowMode, setFlowModeState] = useState<FlowMode>(loadFlowMode);
+  const flowModeRef = useRef<FlowMode>(flowMode);
+  const singRef = useRef<(() => Promise<void>) | null>(null);
+  const autoSingFired = useRef(false);
   const [cuePlaying, setCuePlaying] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [remainingDelayMs, setRemainingDelayMs] = useState(0);
@@ -93,12 +111,28 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
       if (plan.playCadence) await cues.playCadence(trial.tonicMidi);
       await cues.playSequence(plan.contextMidis);
       setCuePlaying(false);
-      // Stop here: the user confirms they heard the cue before the trial
-      // moves on — a missed cue becomes a replay, not a doomed attempt.
-      setPhase("heard");
+      if (flowModeRef.current === "auto") {
+        // Auto: trust the cue was heard and keep moving. A missed cue is
+        // one Retry away, and click mode remains the careful path.
+        beginImagining(session);
+      } else {
+        // Click: confirm the cue landed before the trial moves on.
+        setPhase("heard");
+      }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [cues],
   );
+
+  const setFlowMode = useCallback((mode: FlowMode) => {
+    flowModeRef.current = mode;
+    setFlowModeState(mode);
+    try {
+      window.localStorage.setItem(FLOW_MODE_KEY, mode);
+    } catch {
+      /* private mode: preference just doesn't persist */
+    }
+  }, []);
 
   /** Replay the whole cue from the heard-check, as often as needed. */
   const replayCue = useCallback(async () => {
@@ -111,13 +145,18 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
     setCuePlaying(false);
   }, [cues, cuePlaying]);
 
-  /** The user heard the cue: begin imagining (and the retention delay). */
-  const confirmHeard = useCallback(() => {
-    const session = sessionRef.current;
-    if (!session || cuePlaying) return;
+  /** Shared imagine entry: retention delay, and in auto mode the go-signal. */
+  const beginImagining = (session: TrialSession) => {
+    autoSingFired.current = false;
     session.beginImagining();
     setPhase("imagine");
     const delayMs = session.definition.delayMs;
+    const auto = flowModeRef.current === "auto";
+    const autoGo = () => {
+      if (autoSingFired.current) return;
+      autoSingFired.current = true;
+      void singRef.current?.();
+    };
     if (delayMs > 0) {
       setRemainingDelayMs(delayMs);
       const startedAt = Date.now();
@@ -125,11 +164,21 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
         const left = delayMs - (Date.now() - startedAt);
         setRemainingDelayMs(Math.max(0, left));
         if (left > 0) window.setTimeout(tick, 100);
+        else if (auto) autoGo();
       };
       tick();
     } else {
       setRemainingDelayMs(0);
+      if (auto) window.setTimeout(autoGo, AUTO_BEAT_MS);
     }
+  };
+
+  /** The user heard the cue (click mode): begin imagining. */
+  const confirmHeard = useCallback(() => {
+    const session = sessionRef.current;
+    if (!session || cuePlaying) return;
+    beginImagining(session);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cuePlaying]);
 
   const sing = useCallback(async () => {
@@ -143,6 +192,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
     singTimer.current = window.setTimeout(() => finish(), SING_WINDOW_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [microphone, cues]);
+  singRef.current = sing;
 
   const finish = useCallback(() => {
     const session = sessionRef.current;
@@ -198,6 +248,8 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
 
   return {
     phase,
+    flowMode,
+    setFlowMode,
     cuePlaying,
     inputLevel,
     noiseThreshold,
