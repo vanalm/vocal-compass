@@ -2,6 +2,26 @@ import { describe, expect, it } from "vitest";
 import { exercises } from "../src/core/exercises/registry";
 import { MAJOR_SCALE } from "../src/core/music/theory";
 
+import { exercises as registryForCadence } from "../src/core/exercises/registry";
+import { describe as d2, expect as e2, it as i2 } from "vitest";
+
+d2("cadence policy", () => {
+  i2("Direct echo presents the bare target: no key-establishing cadence", () => {
+    const echo = registryForCadence.get("echo");
+    const trial = echo.createTrial({ difficulty: "steps", delayMs: 0 });
+    e2(echo.cuePlan(trial).playCadence).toBe(false);
+  });
+
+  i2.each(["route", "silent", "tonal", "missing"])(
+    "%s keeps the cadence — key context is part of what it trains",
+    (id) => {
+      const exercise = registryForCadence.get(id);
+      const trial = exercise.createTrial({ difficulty: "steps", delayMs: 0 });
+      e2(exercise.cuePlan(trial).playCadence).toBe(true);
+    },
+  );
+});
+
 describe("Exercise registry", () => {
   it("registers the five v1 modules with unique ids", () => {
     const ids = exercises.all().map((e) => e.id);

@@ -19,6 +19,7 @@ export class DirectEcho extends Exercise {
 
   cuePlan(trial: TrialDefinition): CuePlan {
     return {
+      playCadence: false, // bare target: cadence pitches would interfere
       contextMidis: [trial.targetMidi],
       playStartAtGo: false,
       revealTarget: true,
@@ -42,6 +43,7 @@ export class RouteReplay extends Exercise {
 
   cuePlan(trial: TrialDefinition): CuePlan {
     return {
+      playCadence: true,
       contextMidis: [trial.startMidi, trial.targetMidi],
       playStartAtGo: true,
       revealTarget: false,
@@ -67,6 +69,7 @@ export class SilentMap extends Exercise {
   cuePlan(trial: TrialDefinition): CuePlan {
     const seconds = (trial.delayMs / 1000).toFixed(0);
     return {
+      playCadence: true,
       contextMidis: [trial.targetMidi],
       playStartAtGo: false,
       revealTarget: true,
@@ -90,6 +93,7 @@ export class TonalNorth extends Exercise {
 
   cuePlan(trial: TrialDefinition): CuePlan {
     return {
+      playCadence: true,
       contextMidis: [trial.tonicMidi, trial.startMidi],
       playStartAtGo: true,
       revealTarget: false,
@@ -132,6 +136,7 @@ export class MissingNote extends Exercise {
 
   cuePlan(trial: TrialDefinition): CuePlan {
     return {
+      playCadence: true,
       contextMidis: trial.phraseMidis.slice(0, -1),
       playStartAtGo: false,
       revealTarget: false,

@@ -90,7 +90,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
       setPhase("listen");
       session.beginListening();
       setCuePlaying(true);
-      await cues.playCadence(trial.tonicMidi);
+      if (plan.playCadence) await cues.playCadence(trial.tonicMidi);
       await cues.playSequence(plan.contextMidis);
       setCuePlaying(false);
       // Stop here: the user confirms they heard the cue before the trial
@@ -106,7 +106,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
     const plan = planRef.current;
     if (!session || !plan || cuePlaying) return;
     setCuePlaying(true);
-    await cues.playCadence(session.definition.tonicMidi);
+    if (plan.playCadence) await cues.playCadence(session.definition.tonicMidi);
     await cues.playSequence(plan.contextMidis);
     setCuePlaying(false);
   }, [cues, cuePlaying]);

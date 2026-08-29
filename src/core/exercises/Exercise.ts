@@ -5,6 +5,10 @@ export type Difficulty = "steps" | "thirds" | "leaps" | "mixed";
 
 /** What the cue player should sound before an attempt. */
 export interface CuePlan {
+  /** Whether the tonic cadence sounds first. Echo skips it: bare-target
+   * imitation is the measurement, and extra pitches before the target are
+   * interference, not context. */
+  playCadence: boolean;
   /** Ordered context notes (tonic, cadence, phrase…). */
   contextMidis: number[];
   /** Whether the start note is sounded at the go-signal. */
