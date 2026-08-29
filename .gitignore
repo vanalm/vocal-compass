@@ -8,3 +8,4 @@ tsconfig.tsbuildinfo
 server/.venv/
 server/__pycache__/
 server/*.db
+server/uvicorn.log
