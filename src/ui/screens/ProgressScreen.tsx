@@ -10,6 +10,7 @@ import { useServices } from "../services";
 import { KpiCards } from "../components/KpiCards";
 import { RangeProbe } from "../components/RangeProbe";
 import { AccountCard } from "../components/AccountCard";
+import { ImprovementCard } from "../components/ImprovementCard";
 import { PracticeChart, RangeChart, RegisterHeatMap } from "../components/ProgressCharts";
 
 export function ProgressScreen({
@@ -57,6 +58,13 @@ export function ProgressScreen({
         </div>
         <KpiCards summary={summary} />
         <AccountCard onSynced={onSynced} />
+      </section>
+
+      <section className="vc-card vc-side" style={{ gridColumn: "span 12" }}>
+        <div className="vc-section-title">
+          <h3>Your progress</h3>
+        </div>
+        <ImprovementCard trials={trials} ranges={ranges} />
       </section>
 
       <div className="vc-chart-grid" style={{ gridColumn: "span 12" }}>

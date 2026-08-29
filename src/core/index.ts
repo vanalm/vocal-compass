@@ -24,6 +24,8 @@ export { segmentTrace } from "./trial/segmentTrace";
 export { heldExtremes } from "./pitch/RangeAnalyzer";
 export type { HeldExtremes, RangeAnalyzerOptions } from "./pitch/RangeAnalyzer";
 export { practiceDays } from "./kpi/practiceTime";
+export { improvementSummary } from "./kpi/improvement";
+export type { ImprovementSummary, Movement, RangeMovement } from "./kpi/improvement";
 export { pitchZones } from "./kpi/pitchZones";
 export type { PitchZone } from "./kpi/pitchZones";
 export { SyncClient } from "./sync/SyncClient";

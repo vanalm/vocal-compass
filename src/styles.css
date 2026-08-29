@@ -188,3 +188,13 @@ button { cursor: pointer; }
 .vc-account { margin-top: 14px; border-top: 1px solid #1d332a; padding-top: 12px; display: grid; gap: 8px; }
 .vc-account-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .vc-input { background: #10201a; border: 1px solid #29443a; border-radius: 10px; padding: 10px 12px; color: #eaf8f1; font-size: 13px; min-width: 200px; }
+.vc-moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+.vc-move { border: 1px solid #1d332a; border-radius: 12px; padding: 10px 12px; display: grid; gap: 3px; }
+.vc-move-label { font-size: 11px; color: #748b82; }
+.vc-move strong { font-size: 22px; }
+.vc-move-delta { font-size: 11px; }
+.vc-move-up .vc-move-delta { color: #53d69e; }
+.vc-move-down .vc-move-delta { color: #ffbdc5; }
+.vc-move-flat .vc-move-delta { color: #748b82; }
+.vc-spark-wrap { margin-top: 12px; display: grid; gap: 4px; color: #53d69e; }
+.vc-spark { width: 100%; height: 36px; }
