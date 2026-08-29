@@ -230,3 +230,7 @@ button { cursor: pointer; }
 .vc-micmeter-bar i.heard { background: #53d69e; }
 .vc-micmeter-label { font-size: 11px; color: #748b82; }
 .vc-micmeter-label.heard { color: #53d69e; font-weight: 700; }
+.vc-today-status { color: #8fa69e; font-size: 14px; margin-top: 8px; }
+.vc-howto-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.vc-howto-steps strong { color: #8ce8bd; font-size: 13px; }
+.vc-howto-steps p { color: #748b82; font-size: 12px; line-height: 1.5; margin: 6px 0 0; }

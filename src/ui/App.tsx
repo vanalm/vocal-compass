@@ -13,7 +13,7 @@ type Screen = "today" | "test" | "lab" | "range" | "progress" | "protocol";
 
 function Shell() {
   const [screen, setScreen] = useState<Screen>("today");
-  const [labExerciseId, setLabExerciseId] = useState<string | undefined>();
+
   const {
     trials,
     ranges,
@@ -37,11 +37,6 @@ function Shell() {
     setScreen(target[lane]);
   };
 
-  const openLab = (exerciseId: string) => {
-    setLabExerciseId(exerciseId);
-    setScreen("lab");
-  };
-
   return (
     <div className="vc-app">
       <div className="vc-shell">
@@ -55,10 +50,12 @@ function Shell() {
           </div>
         </header>
 
-        {screen === "today" && <TodayScreen trials={trials} onStart={openLab} />}
+        {screen === "today" && (
+          <TodayScreen trials={trials} ranges={ranges} sessions={sessions} onGo={goToLane} />
+        )}
         {screen === "test" && <TestScreen save={save} onFinished={() => setScreen("progress")} />}
         {screen === "lab" && (
-          <LabScreen key={labExerciseId ?? "lab"} save={save} initialExerciseId={labExerciseId} />
+          <LabScreen save={save} />
         )}
         {screen === "progress" && (
           <ProgressScreen

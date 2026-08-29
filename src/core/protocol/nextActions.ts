@@ -83,7 +83,7 @@ export function nextActions(
     cta: "Practice in the Lab",
     due: !trialToday && weekDays < 4,
     daysOverdue: trialGap == null ? 0 : Math.max(0, trialGap - PITCH_GRACE_DAYS),
-    detail: `${weekDays}/4 practice days this week.`,
+    detail: `${weekDays}/4 pitch-practice days this week.`,
   });
 
   const lastRange = latest(ranges);
