@@ -57,35 +57,6 @@ export function CueIndicator({ playing, label = "Playing the cue…" }: { playin
 }
 
 /**
- * The stop-and-confirm gate after cue playback: a missed cue becomes a
- * replay, not a doomed attempt. Shared by every trial surface.
- */
-export function HeardCheck({
-  cuePlaying,
-  onYes,
-  onReplay,
-}: {
-  cuePlaying: boolean;
-  onYes: () => void;
-  onReplay: () => void;
-}) {
-  return (
-    <div className="vc-prompt" style={{ marginTop: 60 }}>
-      <h3>Did you hear it?</h3>
-      <CueIndicator playing={cuePlaying} />
-      <div className="vc-actions vc-center-actions">
-        <button className="vc-button primary" disabled={cuePlaying} onClick={onYes}>
-          Yes — continue
-        </button>
-        <button className="vc-button" disabled={cuePlaying} onClick={onReplay}>
-          Play it again
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/**
  * Live proof the microphone is hearing something: a level bar that moves
  * with input loudness (voiced or not), turning green with the detected note
  * once the sound clears the noise gate. Kills the "is it even recording?"

@@ -12,7 +12,7 @@ import {
 } from "../../core";
 import { useTrialRunner, type RunnerSettings } from "../hooks/useTrialRunner";
 import { PitchReadout } from "../components/PitchReadout";
-import { CueIndicator, FlowModeToggle, HeardCheck, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
+import { CueIndicator, FlowModeToggle, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
 import { TraceChart } from "../components/TraceChart";
 
 const DELAYS = [0, 2000, 5000, 8000];
@@ -66,11 +66,9 @@ export function LabScreen({
   const primaryAction =
     runner.phase === "idle"
       ? begin
-      : runner.phase === "heard" && !runner.cuePlaying
-        ? runner.confirmHeard
-        : runner.phase === "imagine" && runner.remainingDelayMs <= 0
-          ? () => void runner.sing()
-          : runner.phase === "sing"
+      : runner.phase === "imagine" && runner.remainingDelayMs <= 0 && !runner.cuePlaying
+        ? runner.commit
+        : runner.phase === "sing"
             ? runner.finish
             : runner.phase === "review"
               ? saveTrial
@@ -176,26 +174,22 @@ export function LabScreen({
           </div>
         )}
 
-        {runner.phase === "heard" && (
-          <HeardCheck
-            cuePlaying={runner.cuePlaying}
-            onYes={runner.confirmHeard}
-            onReplay={() => void runner.replayCue()}
-          />
-        )}
-
         {runner.phase === "imagine" && trial && (
           <div className="vc-prompt" style={{ marginTop: 60 }}>
             <h3>Imagine</h3>
             <p>{runner.prompt}</p>
+            <CueIndicator playing={runner.cuePlaying} />
             {runner.remainingDelayMs > 0 ? (
               <p className="vc-small" style={{ marginTop: 12 }}>
                 Hold it silently… {(runner.remainingDelayMs / 1000).toFixed(1)} s
               </p>
             ) : (
               <div className="vc-actions vc-center-actions">
-                <button className="vc-button primary" onClick={() => void runner.sing()}>
+                <button className="vc-button primary" disabled={runner.cuePlaying} onClick={runner.commit}>
                   I hear it — sing
+                </button>
+                <button className="vc-button" disabled={runner.cuePlaying} onClick={() => void runner.replayCue()}>
+                  Play it again
                 </button>
                 <button className="vc-button warn" onClick={() => { runner.markLost(); setShowRescue(true); }}>
                   I’m lost

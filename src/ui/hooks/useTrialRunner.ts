@@ -21,7 +21,7 @@ export interface RunnerSettings {
   feedbackMode: FeedbackMode;
 }
 
-export type RunnerPhase = "idle" | "listen" | "heard" | "imagine" | "sing" | "review";
+export type RunnerPhase = "idle" | "listen" | "imagine" | "sing" | "review";
 
 /** click = explicit gates between phases; auto = flows once it's go time. */
 export type FlowMode = "click" | "auto";
@@ -111,14 +111,8 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
       if (plan.playCadence) await cues.playCadence(trial.tonicMidi);
       await cues.playSequence(plan.contextMidis);
       setCuePlaying(false);
-      if (flowModeRef.current === "auto") {
-        // Auto: trust the cue was heard and keep moving. A missed cue is
-        // one Retry away, and click mode remains the careful path.
-        beginImagining(session);
-      } else {
-        // Click: confirm the cue landed before the trial moves on.
-        setPhase("heard");
-      }
+      // One decision point after the cue: replay it, or commit and sing.
+      enterImagine(session);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cues],
@@ -134,29 +128,43 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
     }
   }, []);
 
-  /** Replay the whole cue from the heard-check, as often as needed. */
+  /** Replay the whole cue from the decision point, as often as needed. */
   const replayCue = useCallback(async () => {
     const session = sessionRef.current;
     const plan = planRef.current;
-    if (!session || !plan || cuePlaying) return;
+    if (!session || !plan || cuePlaying || autoSingFired.current) return;
     setCuePlaying(true);
     if (plan.playCadence) await cues.playCadence(session.definition.tonicMidi);
     await cues.playSequence(plan.contextMidis);
     setCuePlaying(false);
   }, [cues, cuePlaying]);
 
-  /** Shared imagine entry: retention delay, and in auto mode the go-signal. */
-  const beginImagining = (session: TrialSession) => {
+  /** After the cue: the single decision point (replay, or commit-and-sing). */
+  const enterImagine = (session: TrialSession) => {
     autoSingFired.current = false;
     session.beginImagining();
     setPhase("imagine");
-    const delayMs = session.definition.delayMs;
-    const auto = flowModeRef.current === "auto";
-    const autoGo = () => {
+    setRemainingDelayMs(0);
+    if (flowModeRef.current === "auto") {
+      window.setTimeout(() => commitRef.current?.(), AUTO_BEAT_MS);
+    }
+  };
+
+  /**
+   * The one gate: the user commits to having the target. With a retention
+   * delay the silence starts NOW and capture follows on its own — committing
+   * was the decision; no further click is owed.
+   */
+  const commit = useCallback(() => {
+    const session = sessionRef.current;
+    if (!session || cuePlaying || session.currentPhase !== "imagine") return;
+    if (autoSingFired.current) return;
+    const go = () => {
       if (autoSingFired.current) return;
       autoSingFired.current = true;
       void singRef.current?.();
     };
+    const delayMs = session.definition.delayMs;
     if (delayMs > 0) {
       setRemainingDelayMs(delayMs);
       const startedAt = Date.now();
@@ -164,22 +172,16 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
         const left = delayMs - (Date.now() - startedAt);
         setRemainingDelayMs(Math.max(0, left));
         if (left > 0) window.setTimeout(tick, 100);
-        else if (auto) autoGo();
+        else go();
       };
       tick();
     } else {
-      setRemainingDelayMs(0);
-      if (auto) window.setTimeout(autoGo, AUTO_BEAT_MS);
+      go();
     }
-  };
-
-  /** The user heard the cue (click mode): begin imagining. */
-  const confirmHeard = useCallback(() => {
-    const session = sessionRef.current;
-    if (!session || cuePlaying) return;
-    beginImagining(session);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cuePlaying]);
+  const commitRef = useRef<(() => void) | null>(null);
+  commitRef.current = commit;
 
   const sing = useCallback(async () => {
     const session = sessionRef.current;
@@ -265,7 +267,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>) {
     session: sessionRef.current,
     start,
     replayCue,
-    confirmHeard,
+    commit,
     sing,
     finish,
     markLost,
