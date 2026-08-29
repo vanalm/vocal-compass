@@ -21,6 +21,7 @@ export function ProgressScreen({
   ranges,
   sessions,
   onGo,
+  onDeleteTrial,
   onSynced,
   onExport,
   onClear,
@@ -29,6 +30,7 @@ export function ProgressScreen({
   ranges: RangeMeasurement[];
   sessions: ExerciseSession[];
   onGo: (lane: Lane) => void;
+  onDeleteTrial: (id: string) => Promise<void>;
   onSynced: () => Promise<void>;
   onExport: () => void;
   onClear: () => void;
@@ -199,7 +201,7 @@ export function ProgressScreen({
           ) : (
             <table className="vc-table">
               <thead>
-                <tr><th>When</th><th>Module</th><th>Requested</th><th>Selected</th><th>Result</th><th>Hints</th><th>Intent</th></tr>
+                <tr><th>When</th><th>Module</th><th>Requested</th><th>Selected</th><th>Result</th><th>Hints</th><th>Intent</th><th aria-label="Delete" /></tr>
               </thead>
               <tbody>
                 {recent.map((t) => (
@@ -211,6 +213,19 @@ export function ProgressScreen({
                     <td>{t.finalErrorKind}</td>
                     <td>{t.hintLevel || "—"}</td>
                     <td>{t.intent ?? "—"}</td>
+                    <td>
+                      <button
+                        className="vc-row-delete"
+                        title="Delete this trial (it will not come back through sync)"
+                        onClick={() => {
+                          if (window.confirm("Delete this trial? Sync will not bring it back.")) {
+                            void onDeleteTrial(t.id);
+                          }
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

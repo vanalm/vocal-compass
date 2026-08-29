@@ -162,3 +162,41 @@ class TestSessionSync:
         response = client.post("/sync", json={"trials": [trial("t1")], "ranges": []}, headers=headers)
         assert response.status_code == 200
         assert response.json()["sessions"] == []
+
+
+def stone(record_id, stone_id="st1"):
+    return {"id": stone_id, "createdAt": "2026-09-02T00:00:00.000Z", "kind": "trial", "recordId": record_id}
+
+
+class TestTombstones:
+    def test_tombstone_deletes_the_record_serverside(self, client):
+        headers = sign_in(client)
+        client.post("/sync", json={"trials": [trial("t1"), trial("t2")], "ranges": []}, headers=headers)
+        body = client.post(
+            "/sync", json={"trials": [], "ranges": [], "tombstones": [stone("t1")]}, headers=headers
+        ).json()
+        assert [t["id"] for t in body["trials"]] == ["t2"]
+        assert [s["recordId"] for s in body["tombstones"]] == ["t1"]
+
+    def test_dead_record_cannot_be_repushed(self, client):
+        headers = sign_in(client)
+        client.post("/sync", json={"trials": [], "ranges": [], "tombstones": [stone("t1")]}, headers=headers)
+        body = client.post("/sync", json={"trials": [trial("t1")], "ranges": []}, headers=headers).json()
+        assert body["trials"] == []
+
+    def test_second_device_receives_the_tombstone(self, client):
+        device_a = sign_in(client)
+        client.post("/sync", json={"trials": [trial("t1")], "ranges": []}, headers=device_a)
+        client.post("/sync", json={"trials": [], "ranges": [], "tombstones": [stone("t1")]}, headers=device_a)
+        device_b = sign_in(client)
+        body = client.post("/sync", json={"trials": [], "ranges": []}, headers=device_b).json()
+        assert body["trials"] == []
+        assert [s["recordId"] for s in body["tombstones"]] == ["t1"]
+
+    def test_tombstones_are_user_scoped(self, client):
+        alice = sign_in(client, "alice@example.com")
+        bob = sign_in(client, "bob@example.com")
+        client.post("/sync", json={"trials": [trial("t1")], "ranges": []}, headers=bob)
+        client.post("/sync", json={"trials": [], "ranges": [], "tombstones": [stone("t1")]}, headers=alice)
+        body = client.post("/sync", json={"trials": [], "ranges": []}, headers=bob).json()
+        assert [t["id"] for t in body["trials"]] == ["t1"]

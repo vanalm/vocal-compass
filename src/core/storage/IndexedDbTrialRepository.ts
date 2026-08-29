@@ -1,8 +1,9 @@
-import type { ExerciseSession, RangeMeasurement, TrialRecord } from "../types";
-import { buildExportJson, parseImportJson, type TrialRepository } from "./TrialRepository";
+import type { ExerciseSession, RangeMeasurement, Tombstone, TrialRecord } from "../types";
+import { buildExportJson, importInto, type TrialRepository } from "./TrialRepository";
 
 const DB_NAME = "vocal-compass";
-const DB_VERSION = 3; // v2: ranges store; v3: sessions store
+const DB_VERSION = 4; // v2 ranges; v3 sessions; v4 tombstones
+const TOMBSTONES = "tombstones";
 const SESSIONS = "sessions";
 const TRIALS = "trials";
 const RANGES = "ranges";
@@ -30,6 +31,10 @@ export class IndexedDbTrialRepository implements TrialRepository {
           }
           if (!db.objectStoreNames.contains(SESSIONS)) {
             const store = db.createObjectStore(SESSIONS, { keyPath: "id" });
+            store.createIndex("createdAt", "createdAt");
+          }
+          if (!db.objectStoreNames.contains(TOMBSTONES)) {
+            const store = db.createObjectStore(TOMBSTONES, { keyPath: "id" });
             store.createIndex("createdAt", "createdAt");
           }
         };
@@ -81,21 +86,47 @@ export class IndexedDbTrialRepository implements TrialRepository {
     return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  async deleteTrial(id: string): Promise<void> {
+    await this.applyTombstone({
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      kind: "trial",
+      recordId: id,
+    });
+  }
+
+  async applyTombstone(stone: Tombstone): Promise<void> {
+    const existing = await this.tombstones();
+    if (!existing.some((s) => s.kind === stone.kind && s.recordId === stone.recordId)) {
+      await this.tx(TOMBSTONES, "readwrite", (store) => store.put(stone));
+    }
+    const storeName =
+      stone.kind === "trial" ? TRIALS : stone.kind === "range" ? RANGES : SESSIONS;
+    await this.tx(storeName, "readwrite", (store) => store.delete(stone.recordId));
+  }
+
+  async tombstones(): Promise<Tombstone[]> {
+    const rows = await this.tx<Tombstone[]>(TOMBSTONES, "readonly", (store) => store.getAll());
+    return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
   async clear(): Promise<void> {
     await this.tx(TRIALS, "readwrite", (store) => store.clear());
     await this.tx(RANGES, "readwrite", (store) => store.clear());
     await this.tx(SESSIONS, "readwrite", (store) => store.clear());
+    await this.tx(TOMBSTONES, "readwrite", (store) => store.clear());
   }
 
   async exportJson(): Promise<string> {
-    return buildExportJson(await this.all(), await this.ranges(), await this.sessions());
+    return buildExportJson(
+      await this.all(),
+      await this.ranges(),
+      await this.sessions(),
+      await this.tombstones(),
+    );
   }
 
   async importJson(json: string): Promise<number> {
-    const { trials, ranges, sessions } = parseImportJson(json);
-    for (const t of trials) await this.save(t);
-    for (const r of ranges) await this.saveRange(r);
-    for (const x of sessions) await this.saveSession(x);
-    return trials.length + ranges.length + sessions.length;
+    return importInto(this, json);
   }
 }

@@ -1,12 +1,13 @@
-import type { ExerciseSession, RangeMeasurement, TrialRecord } from "../types";
+import type { ExerciseSession, RangeMeasurement, Tombstone, TrialRecord } from "../types";
 
-/** Export payload shape; v2 added ranges, v3 exercise sessions. */
+/** Export payload shape; v2 added ranges, v3 sessions, v4 tombstones. */
 export interface ExportPayload {
   app: string;
   version: number;
   trials: TrialRecord[];
   ranges: RangeMeasurement[];
   sessions: ExerciseSession[];
+  tombstones: Tombstone[];
 }
 
 /**
@@ -21,6 +22,11 @@ export interface TrialRepository {
   ranges(): Promise<RangeMeasurement[]>;
   saveSession(session: ExerciseSession): Promise<void>;
   sessions(): Promise<ExerciseSession[]>;
+  /** Remove a trial and record a tombstone so sync cannot resurrect it. */
+  deleteTrial(id: string): Promise<void>;
+  /** Enforce a (possibly remote) tombstone: store it and drop its target. */
+  applyTombstone(stone: Tombstone): Promise<void>;
+  tombstones(): Promise<Tombstone[]>;
   clear(): Promise<void>;
   exportJson(): Promise<string>;
   importJson(json: string): Promise<number>;
@@ -30,8 +36,16 @@ export function buildExportJson(
   trials: TrialRecord[],
   ranges: RangeMeasurement[],
   sessions: ExerciseSession[],
+  tombstones: Tombstone[],
 ): string {
-  const payload: ExportPayload = { app: "vocal-compass", version: 3, trials, ranges, sessions };
+  const payload: ExportPayload = {
+    app: "vocal-compass",
+    version: 4,
+    trials,
+    ranges,
+    sessions,
+    tombstones,
+  };
   return JSON.stringify(payload, null, 2);
 }
 
@@ -39,15 +53,46 @@ export function parseImportJson(json: string): {
   trials: TrialRecord[];
   ranges: RangeMeasurement[];
   sessions: ExerciseSession[];
+  tombstones: Tombstone[];
 } {
   const parsed = JSON.parse(json) as Partial<ExportPayload>;
-  return { trials: parsed.trials ?? [], ranges: parsed.ranges ?? [], sessions: parsed.sessions ?? [] };
+  return {
+    trials: parsed.trials ?? [],
+    ranges: parsed.ranges ?? [],
+    sessions: parsed.sessions ?? [],
+    tombstones: parsed.tombstones ?? [],
+  };
+}
+
+/** Shared import policy: dead records stay dead, even from old backups. */
+export async function importInto(repo: TrialRepository, json: string): Promise<number> {
+  const { trials, ranges, sessions, tombstones } = parseImportJson(json);
+  for (const stone of tombstones) await repo.applyTombstone(stone);
+  const dead = new Set((await repo.tombstones()).map((s) => `${s.kind}:${s.recordId}`));
+  let imported = tombstones.length;
+  for (const t of trials) {
+    if (dead.has(`trial:${t.id}`)) continue;
+    await repo.save(t);
+    imported += 1;
+  }
+  for (const r of ranges) {
+    if (dead.has(`range:${r.id}`)) continue;
+    await repo.saveRange(r);
+    imported += 1;
+  }
+  for (const x of sessions) {
+    if (dead.has(`session:${x.id}`)) continue;
+    await repo.saveSession(x);
+    imported += 1;
+  }
+  return imported;
 }
 
 export class MemoryTrialRepository implements TrialRepository {
   private records: TrialRecord[] = [];
   private measurements: RangeMeasurement[] = [];
   private exerciseSessions: ExerciseSession[] = [];
+  private stones: Tombstone[] = [];
 
   async save(record: TrialRecord): Promise<void> {
     this.records = this.records.filter((r) => r.id !== record.id);
@@ -76,21 +121,47 @@ export class MemoryTrialRepository implements TrialRepository {
     return [...this.exerciseSessions].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  async deleteTrial(id: string): Promise<void> {
+    await this.applyTombstone({
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      kind: "trial",
+      recordId: id,
+    });
+  }
+
+  async applyTombstone(stone: Tombstone): Promise<void> {
+    if (!this.stones.some((s) => s.kind === stone.kind && s.recordId === stone.recordId)) {
+      this.stones.push(stone);
+    }
+    if (stone.kind === "trial") this.records = this.records.filter((r) => r.id !== stone.recordId);
+    if (stone.kind === "range")
+      this.measurements = this.measurements.filter((m) => m.id !== stone.recordId);
+    if (stone.kind === "session")
+      this.exerciseSessions = this.exerciseSessions.filter((s) => s.id !== stone.recordId);
+  }
+
+  async tombstones(): Promise<Tombstone[]> {
+    return [...this.stones].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
   async clear(): Promise<void> {
     this.records = [];
     this.measurements = [];
     this.exerciseSessions = [];
+    this.stones = [];
   }
 
   async exportJson(): Promise<string> {
-    return buildExportJson(await this.all(), await this.ranges(), await this.sessions());
+    return buildExportJson(
+      await this.all(),
+      await this.ranges(),
+      await this.sessions(),
+      await this.tombstones(),
+    );
   }
 
   async importJson(json: string): Promise<number> {
-    const { trials, ranges, sessions } = parseImportJson(json);
-    for (const t of trials) await this.save(t);
-    for (const r of ranges) await this.saveRange(r);
-    for (const x of sessions) await this.saveSession(x);
-    return trials.length + ranges.length + sessions.length;
+    return importInto(this, json);
   }
 }

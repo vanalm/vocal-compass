@@ -14,8 +14,18 @@ type Screen = "today" | "test" | "lab" | "range" | "progress" | "protocol";
 function Shell() {
   const [screen, setScreen] = useState<Screen>("today");
   const [labExerciseId, setLabExerciseId] = useState<string | undefined>();
-  const { trials, ranges, sessions, save, saveRange, saveSession, clear, exportJson, refresh } =
-    useTrials();
+  const {
+    trials,
+    ranges,
+    sessions,
+    save,
+    saveRange,
+    saveSession,
+    deleteTrial,
+    clear,
+    exportJson,
+    refresh,
+  } = useTrials();
 
   const goToLane = (lane: Lane) => {
     const target: Record<Lane, Screen> = {
@@ -56,6 +66,7 @@ function Shell() {
             ranges={ranges}
             sessions={sessions}
             onGo={goToLane}
+            onDeleteTrial={deleteTrial}
             onSynced={refresh}
             onExport={() => void exportJson()}
             onClear={() => void clear()}

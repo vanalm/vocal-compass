@@ -1,5 +1,5 @@
 import type { TrialRepository } from "../storage/TrialRepository";
-import type { ExerciseSession, RangeMeasurement, TrialRecord } from "../types";
+import type { ExerciseSession, RangeMeasurement, Tombstone, TrialRecord } from "../types";
 
 export interface KeyValueStore {
   get(key: string): string | null;
@@ -62,10 +62,11 @@ export class SyncClient {
     const trials = await repo.all();
     const ranges = await repo.ranges();
     const sessions = await repo.sessions();
+    const tombstones = await repo.tombstones();
     const response = await this.fetchFn(`${this.baseUrl}/sync`, {
       method: "POST",
       headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ trials, ranges, sessions }),
+      body: JSON.stringify({ trials, ranges, sessions, tombstones }),
     });
     if (response.status === 401) {
       this.signOut();
@@ -77,23 +78,27 @@ export class SyncClient {
       trials: TrialRecord[];
       ranges: RangeMeasurement[];
       sessions?: ExerciseSession[];
+      tombstones?: Tombstone[];
     };
+    // Deletions first, so a record the server killed cannot be re-imported.
+    for (const stone of body.tombstones ?? []) await repo.applyTombstone(stone);
+    const dead = new Set((await repo.tombstones()).map((s) => `${s.kind}:${s.recordId}`));
     let pulled = 0;
     const localTrialIds = new Set(trials.map((t) => t.id));
     for (const t of body.trials) {
-      if (localTrialIds.has(t.id)) continue;
+      if (localTrialIds.has(t.id) || dead.has(`trial:${t.id}`)) continue;
       await repo.save(t);
       pulled += 1;
     }
     const localRangeIds = new Set(ranges.map((r) => r.id));
     for (const r of body.ranges) {
-      if (localRangeIds.has(r.id)) continue;
+      if (localRangeIds.has(r.id) || dead.has(`range:${r.id}`)) continue;
       await repo.saveRange(r);
       pulled += 1;
     }
     const localSessionIds = new Set(sessions.map((s) => s.id));
     for (const x of body.sessions ?? []) {
-      if (localSessionIds.has(x.id)) continue;
+      if (localSessionIds.has(x.id) || dead.has(`session:${x.id}`)) continue;
       await repo.saveSession(x);
       pulled += 1;
     }

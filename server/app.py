@@ -73,8 +73,9 @@ class AuthVerifyBody(BaseModel):
 class SyncBody(BaseModel):
     trials: list[dict]
     ranges: list[dict]
-    # Absent from pre-v3 clients; defaulting keeps them syncing.
+    # Absent from older clients; defaulting keeps them syncing.
     sessions: list[dict] = []
+    tombstones: list[dict] = []
 
 
 def now() -> datetime:
@@ -184,6 +185,37 @@ def create_app(
     def sync(
         body: SyncBody, user: User = Depends(current_user), session: Session = Depends(db)
     ) -> dict:
+        # Tombstones first: they delete their target and then block re-insertion,
+        # so a deleted record cannot be resurrected by any device's push.
+        for payload in body.tombstones:
+            stone_id = str(payload.get("id", ""))
+            target_kind = str(payload.get("kind", ""))
+            target_id = str(payload.get("recordId", ""))
+            if not stone_id or target_kind not in ("trial", "range", "session") or not target_id:
+                continue
+            if not session.get(StoredRecord, (user.id, "tombstone", stone_id)):
+                session.add(
+                    StoredRecord(
+                        user_id=user.id,
+                        kind="tombstone",
+                        record_id=stone_id,
+                        created_at=str(payload.get("createdAt", "")),
+                        payload=payload,
+                    )
+                )
+            target = session.get(StoredRecord, (user.id, target_kind, target_id))
+            if target:
+                session.delete(target)
+        session.flush()
+
+        dead = {
+            (r.payload.get("kind"), r.payload.get("recordId"))
+            for r in session.scalars(
+                select(StoredRecord).where(
+                    StoredRecord.user_id == user.id, StoredRecord.kind == "tombstone"
+                )
+            )
+        }
         for kind, records in (
             ("trial", body.trials),
             ("range", body.ranges),
@@ -191,7 +223,7 @@ def create_app(
         ):
             for payload in records:
                 record_id = str(payload.get("id", ""))
-                if not record_id:
+                if not record_id or (kind, record_id) in dead:
                     continue
                 exists = session.get(StoredRecord, (user.id, kind, record_id))
                 if not exists:
@@ -214,7 +246,12 @@ def create_app(
             ).all()
             return [r.payload for r in rows]
 
-        return {"trials": all_of("trial"), "ranges": all_of("range"), "sessions": all_of("session")}
+        return {
+            "trials": all_of("trial"),
+            "ranges": all_of("range"),
+            "sessions": all_of("session"),
+            "tombstones": all_of("tombstone"),
+        }
 
     @app.delete("/data")
     def delete_data(user: User = Depends(current_user), session: Session = Depends(db)) -> dict:

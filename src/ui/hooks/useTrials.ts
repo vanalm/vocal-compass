@@ -45,6 +45,14 @@ export function useTrials() {
     [repository, refresh],
   );
 
+  const deleteTrial = useCallback(
+    async (id: string) => {
+      await repository.deleteTrial(id);
+      await refresh();
+    },
+    [repository, refresh],
+  );
+
   const clear = useCallback(async () => {
     await repository.clear();
     await refresh();
@@ -61,5 +69,5 @@ export function useTrials() {
     URL.revokeObjectURL(url);
   }, [repository]);
 
-  return { trials, ranges, sessions, loaded, save, saveRange, saveSession, clear, exportJson, refresh };
+  return { trials, ranges, sessions, loaded, save, saveRange, saveSession, deleteTrial, clear, exportJson, refresh };
 }

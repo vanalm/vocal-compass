@@ -101,6 +101,20 @@ export interface ExerciseSession {
   stepsCompleted: number;
 }
 
+export type SyncRecordKind = "trial" | "range" | "session";
+
+/**
+ * A deletion that must outlive the record: sync is a union merge of
+ * immutable records, so removing one without a tombstone would just let
+ * every other copy resurrect it on the next sync.
+ */
+export interface Tombstone {
+  id: string;
+  createdAt: string;
+  kind: SyncRecordKind;
+  recordId: string;
+}
+
 export interface KpiSummary {
   total: number;
   scored: number;

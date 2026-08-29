@@ -219,3 +219,5 @@ button { cursor: pointer; }
 .vc-verdict-good { color: #53d69e; }
 .vc-verdict-bad { color: #ffbdc5; }
 .vc-verdict-flat { color: #748b82; }
+.vc-row-delete { border: 0; background: transparent; color: #5b7d70; font-size: 13px; padding: 2px 8px; border-radius: 8px; cursor: pointer; }
+.vc-row-delete:hover { color: #ffbdc5; background: #241318; }

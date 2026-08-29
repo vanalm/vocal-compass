@@ -41,6 +41,7 @@ export { pitchZones } from "./kpi/pitchZones";
 export type { PitchZone } from "./kpi/pitchZones";
 export { SyncClient } from "./sync/SyncClient";
 export type { KeyValueStore } from "./sync/SyncClient";
+// Tombstone & SyncRecordKind export via types barrel (export * from "./types")
 export type { PracticeDay, PracticeTimeOptions } from "./kpi/practiceTime";
 export { CuePlayer } from "./audio/CuePlayer";
 export { MemoryTrialRepository } from "./storage/TrialRepository";
