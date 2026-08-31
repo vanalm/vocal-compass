@@ -237,3 +237,11 @@ button { cursor: pointer; }
 .vc-heatmap-residual { font-size: 9px; color: #5b7d70; }
 .vc-flowmode { display: inline-flex; }
 .vc-flowmode button { padding: 5px 12px; font-size: 11px; }
+.vc-walk { display: grid; gap: 10px; justify-items: start; }
+.vc-walk-target { display: flex; align-items: baseline; gap: 12px; }
+.vc-walk-target strong { font-size: 34px; color: #8ce8bd; }
+.vc-walk-direction { font-size: 12px; color: #748b82; font-weight: 700; }
+.vc-walk-hold { display: flex; gap: 6px; }
+.vc-walk-hold i { width: 16px; height: 6px; border-radius: 999px; background: #142219; border: 1px solid #1d332a; }
+.vc-walk-hold i.on { background: #53d69e; border-color: #53d69e; }
+.vc-range-probe .vc-micmeter { margin: 0; }

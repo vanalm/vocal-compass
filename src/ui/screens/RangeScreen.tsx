@@ -59,8 +59,9 @@ export function RangeScreen({
           <h3>Measure</h3>
         </div>
         <p className="vc-small">
-          Weekly is enough — repeat measurements drift upward ~1.4 st on their own, so a real change
-          must clear ~3 st.
+          Guided tone-matching, one semitone at a time — the discrete-step protocol measures better
+          than free sirening. Weekly is enough: repeat measurements drift ~1.4 st on their own, so a
+          real change must clear ~3 st.
         </p>
         <RangeChart ranges={ranges} />
         {verdict && (
@@ -68,7 +69,7 @@ export function RangeScreen({
             {verdict.label}
           </p>
         )}
-        <RangeProbe onSave={onSaveRange} />
+        <RangeProbe ranges={ranges} onSave={onSaveRange} />
       </section>
 
       <section className="vc-card" style={{ gridColumn: "span 12" }}>

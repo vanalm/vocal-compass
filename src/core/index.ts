@@ -33,6 +33,8 @@ export { NoiseFloorTracker } from "./pitch/NoiseFloorTracker";
 export type { NoiseFloorOptions } from "./pitch/NoiseFloorTracker";
 export { segmentTrace } from "./trial/segmentTrace";
 export { heldExtremes } from "./pitch/RangeAnalyzer";
+export { RangeWalk } from "./pitch/RangeWalk";
+export type { RangeWalkOptions, RangeWalkPhase, RangeWalkState } from "./pitch/RangeWalk";
 export type { HeldExtremes, RangeAnalyzerOptions } from "./pitch/RangeAnalyzer";
 export { practiceDays } from "./kpi/practiceTime";
 export { improvementSummary } from "./kpi/improvement";

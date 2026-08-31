@@ -15,9 +15,11 @@ code and this file together.
   "gains" are reported as within noise. `MEANINGFUL_RANGE_CHANGE_ST`.
 - Discrete half-steps elicit better extremes than glissando (Barrett 2020,
   J Voice 34:179, n=56) and ~10 trials with coaching saturate the measurement
-  (Ma & Li 2017). **Known limitation:** our probe is glissando-based, so it
-  likely under-reports absolute range — fine for tracking *change* with a
-  consistent method, and a discrete-step probe is the evidence-backed upgrade.
+  (Ma & Li 2017). The probe implements this: tone-guided discrete semitone
+  steps (`RangeWalk`), anchor → floor → ceiling, a step counting only when
+  matched and held. (The original glissando probe is superseded; pre-existing
+  measurements used it — expect a one-time apparent jump when comparing across
+  the method change.)
 - A phone cannot do a true voice range profile (frequency × calibrated dB);
   we honestly report semitones only. Same device + same method across
   measurements is the policy that matters (Printz 2017, JSLHR 60:3369).
