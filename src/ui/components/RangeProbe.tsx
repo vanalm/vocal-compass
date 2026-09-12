@@ -2,12 +2,16 @@ import { useState } from "react";
 import {
   coachTip,
   compareRange,
+  lowCutLabel,
+  lowNoteFilterAdvice,
+  noiseFilterAdvice,
   noteName,
   resultLine,
   summarizeRangeWalk,
   type RangeMeasurement,
   type RangeWalkSnapshot,
 } from "../../core";
+import { useMicLowCut } from "../hooks/micLowCut";
 import { useRangeWalk } from "../hooks/useRangeWalk";
 import { RangeLadder } from "./RangeLadder";
 import { CueIndicator, FlowModeToggle, MicMeter, useSpacebarAdvance } from "./TrialStage";
@@ -36,6 +40,7 @@ export function RangeProbe({
   const latest = ranges[ranges.length - 1];
   const startMidi = latest ? Math.round((latest.lowMidi + latest.highMidi) / 2) : DEFAULT_START_MIDI;
   const walk = useRangeWalk(startMidi);
+  const [lowCut, setLowCut] = useMicLowCut();
   const [notice, setNotice] = useState<string | null>(null);
   const s = walk.snap;
 
@@ -48,6 +53,7 @@ export function RangeProbe({
       lowMidi,
       highMidi,
       method: "guided-turns",
+      micLowCut: walk.walkLowCut,
       steps: s.steps,
       trace: [...walk.trace.current],
     });
@@ -84,6 +90,7 @@ export function RangeProbe({
           Soft is fine. Stop at anything that feels strained. About 2–3 minutes. Headphones optional —
           the note and your turn never overlap.
         </p>
+        <p className="vc-small">Microphone filter: {lowCutLabel(lowCut)} — change it in Settings.</p>
         <div className="vc-actions">
           <button className="vc-button primary" onClick={() => void walk.start()}>
             Start
@@ -123,7 +130,10 @@ export function RangeProbe({
       lowMidi: summary.lowMidi,
       highMidi: summary.highMidi,
       method: "guided-turns",
+      micLowCut: walk.walkLowCut,
     });
+    const advice =
+      lowNoteFilterAdvice(s.steps, walk.walkLowCut) ?? noiseFilterAdvice(walk.noisyShare(), walk.walkLowCut);
     return (
       <div className="vc-range-probe" data-phase="done">
         <h4 className="vc-walk-title">
@@ -145,6 +155,23 @@ export function RangeProbe({
             Compared with last time: {comparison.verdict.label}
             {comparison.caveat ? ` ${comparison.caveat}` : ""}
           </p>
+        )}
+        {advice && (
+          <div className="vc-walk-advice" role="note">
+            <p>{advice.message}</p>
+            {lowCut === advice.suggest ? (
+              <p className="vc-small">
+                Filter set to {lowCutLabel(advice.suggest)}. Save or discard this result, then measure again.
+              </p>
+            ) : (
+              <div className="vc-actions">
+                <button className="vc-button" onClick={() => setLowCut(advice.suggest)}>
+                  Switch to {lowCutLabel(advice.suggest)}
+                </button>
+                <span className="vc-small">You can change this any time in Settings.</span>
+              </div>
+            )}
+          </div>
         )}
         <div className="vc-actions">
           <button className="vc-button primary" onClick={() => void save()}>

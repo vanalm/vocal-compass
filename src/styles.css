@@ -293,3 +293,16 @@ button { cursor: pointer; }
 .vc-walk-tip span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #8ce8bd; margin-right: 8px; }
 .vc-walk-insights { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 6px; color: #c9d8d2; font-size: 13px; line-height: 1.45; }
 .vc-error { color: #ffbdc5; }
+.vc-settings-link { border: 1px solid #29443a; background: #10201a; color: #8fa69e; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.vc-settings-link:hover, .vc-settings-link[aria-current="page"] { color: #e8fff5; border-color: #3f6857; }
+.vc-choice-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin: 12px 0; }
+.vc-choice { border: 1px solid #29443a; background: #10201a; border-radius: 12px; padding: 12px; display: grid; gap: 5px; text-align: left; color: #eaf8f1; cursor: pointer; }
+.vc-choice:hover { border-color: #3f6857; }
+.vc-choice.active { border-color: #53d69e; background: #14301f; }
+.vc-choice strong { font-size: 14px; }
+.vc-choice em { font-style: normal; font-size: 11px; font-weight: 700; color: #53d69e; }
+.vc-choice span { font-size: 12px; color: #8fa69e; line-height: 1.4; }
+.vc-walk-advice { width: 100%; box-sizing: border-box; border: 1px solid #65472c; background: #2b2118; border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+.vc-walk-advice p { margin: 0; color: #ffd6ad; font-size: 13px; line-height: 1.45; }
+.vc-walk-advice .vc-small { color: #c9b39a; }
+.vc-walk-advice .vc-actions { margin-top: 0; }

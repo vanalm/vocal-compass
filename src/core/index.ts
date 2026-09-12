@@ -61,6 +61,19 @@ export type {
 } from "./pitch/RangeWalk";
 export { coachTip, resultLine, summarizeRangeWalk } from "./pitch/rangeCoach";
 export type { RangeWalkSummary } from "./pitch/rangeCoach";
+export {
+  DEFAULT_LOW_CUT,
+  LEGACY_LOW_CUT,
+  LOW_CUT_OPTIONS,
+  NOISY_SHARE_FOR_ADVICE,
+  applyLowCut,
+  lowCutLabel,
+  lowCutNodeConfig,
+  lowCutOption,
+  lowNoteFilterAdvice,
+  noiseFilterAdvice,
+} from "./pitch/micFilter";
+export type { FilterAdvice, LowCutNodeConfig, LowCutOption } from "./pitch/micFilter";
 export type { HeldExtremes, RangeAnalyzerOptions } from "./pitch/RangeAnalyzer";
 export { practiceDays } from "./kpi/practiceTime";
 export { improvementSummary } from "./kpi/improvement";

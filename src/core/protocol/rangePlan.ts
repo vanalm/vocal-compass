@@ -17,6 +17,7 @@
  * they are the safe vehicle here, not the engine.
  */
 
+import { LEGACY_LOW_CUT } from "../pitch/micFilter";
 import type { RangeMeasurement } from "../types";
 
 export interface RangeStep {
@@ -138,15 +139,20 @@ export interface RangeComparison {
   caveat: string | null;
 }
 
-type Comparable = Pick<RangeMeasurement, "lowMidi" | "highMidi" | "method">;
+type Comparable = Pick<RangeMeasurement, "lowMidi" | "highMidi" | "method" | "micLowCut">;
 
-/** Change in span between two measurements, flagged when methods differ. */
+/** Change in span between two measurements, flagged when the method or microphone filter differ. */
 export function compareRange(previous: Comparable | undefined, current: Comparable): RangeComparison | null {
   if (!previous) return null;
   const verdict = rangeChangeVerdict(previous.highMidi - previous.lowMidi, current.highMidi - current.lowMidi);
+  const differences: string[] = [];
+  if (previous.method !== current.method) differences.push("method");
+  if ((previous.micLowCut ?? LEGACY_LOW_CUT) !== (current.micLowCut ?? LEGACY_LOW_CUT)) {
+    differences.push("microphone filter");
+  }
   const caveat =
-    previous.method !== current.method
-      ? "The earlier measurement used a different method, so compare with caution."
+    differences.length > 0
+      ? `The earlier measurement used a different ${differences.join(" and ")}, so compare with caution.`
       : null;
   return { verdict, caveat };
 }

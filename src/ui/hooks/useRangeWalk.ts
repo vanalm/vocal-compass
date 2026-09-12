@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { RangeWalk, type PitchSample, type RangeWalkSnapshot, type WalkEffect } from "../../core";
+import {
+  RangeWalk,
+  type LowCutSetting,
+  type PitchSample,
+  type RangeWalkSnapshot,
+  type WalkEffect,
+} from "../../core";
 import { useServices } from "../services";
 import { useFlowMode } from "./flowMode";
 
@@ -24,6 +30,8 @@ export function useRangeWalk(startMidi: number) {
   const walkRef = useRef<RangeWalk | null>(null);
   const trace = useRef<TraceFrame[]>([]);
   const tonesSounding = useRef(0);
+  const turnFrames = useRef({ total: 0, noisy: 0 });
+  const [walkLowCut, setWalkLowCut] = useState<LowCutSetting>(microphone.lowCutSetting);
   const [snap, setSnap] = useState<RangeWalkSnapshot | null>(null);
   const [tonePlaying, setTonePlaying] = useState(false);
   const [level, setLevel] = useState(0);
@@ -62,8 +70,10 @@ export function useRangeWalk(startMidi: number) {
         setThreshold(frame.noise.threshold);
         setSample(frame.raw);
         const raw = frame.raw;
-        if (raw && walk.currentPhase === "sing") {
-          trace.current.push({ t: raw.at, midi: raw.midi, clarity: raw.clarity, rms: raw.rms });
+        if (walk.currentPhase === "sing") {
+          turnFrames.current.total += 1;
+          if (frame.noise.tooNoisy) turnFrames.current.noisy += 1;
+          if (raw) trace.current.push({ t: raw.at, midi: raw.midi, clarity: raw.clarity, rms: raw.rms });
         }
         walk.feed(raw ? raw.midi : null, raw ? raw.at : Date.now());
       },
@@ -104,6 +114,8 @@ export function useRangeWalk(startMidi: number) {
   const start = useCallback(async () => {
     setMicError(null);
     trace.current = [];
+    turnFrames.current = { total: 0, noisy: 0 };
+    setWalkLowCut(microphone.lowCutSetting);
     await microphone.start();
     if (microphone.status !== "live") return;
     const walk = new RangeWalk(startMidi, { autoAdvance: flowMode === "auto" });
@@ -131,6 +143,7 @@ export function useRangeWalk(startMidi: number) {
   const reset = useCallback(() => {
     walkRef.current = null;
     trace.current = [];
+    turnFrames.current = { total: 0, noisy: 0 };
     microphone.stop();
     setSnap(null);
     setTonePlaying(false);
@@ -146,6 +159,11 @@ export function useRangeWalk(startMidi: number) {
     sample,
     micError,
     trace,
+    /** The low-cut filter this walk ran with (a later settings change doesn't rewrite it). */
+    walkLowCut,
+    /** Share of the singer's-turn frames the noise tracker flagged as too noisy. */
+    noisyShare: () =>
+      turnFrames.current.total > 0 ? turnFrames.current.noisy / turnFrames.current.total : 0,
     start,
     next,
     retry,

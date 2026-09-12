@@ -48,7 +48,8 @@ DOM assumptions — and every seam is an interface or abstract class:
 | `pitch/PitchSmoother.ts` | Streaming spike suppressor: clarity gate + one-frame confirmation for large jumps; never bends values, so real octave leaps survive | Pass custom `SmootherOptions` |
 | `pitch/NoiseFloorTracker.ts` | Adaptive voicing gate: low-percentile rolling floor of unvoiced frames; equals the old fixed gate in quiet rooms, flags `tooNoisy` when singing can't be separated | Pass custom `NoiseFloorOptions` |
 | `pitch/PitchPipeline.ts` | The per-tick path (detector → noise gate → smoother); pure, so the gating truth table is unit-tested with a stubbed detector | Inject detector/smoother/tracker |
-| `pitch/MicrophoneEngine.ts` | getUserMedia/AudioContext lifecycle with an 80Hz high-pass; delegates every tick to the injected pipeline | — |
+| `pitch/MicrophoneEngine.ts` | getUserMedia/AudioContext lifecycle with a configurable low-cut filter (default 60 Hz, set in Settings); delegates every tick to the injected pipeline | — |
+| `pitch/micFilter.ts` | Low-cut options and their trade-offs, plus the advice that flags when range results point at the filter rather than the voice | Add an option |
 | `audio/CuePlayer.ts` | Web Audio cue synthesis (notes, sequences, cadences) | — |
 | `storage/TrialRepository.ts` | Persistence seam: IndexedDB in the browser, memory in tests; stores trials + range measurements | Implement `TrialRepository` |
 | `pitch/RangeAnalyzer.ts` | Range from a siren sweep: only pitch held ≥3 continuous frames counts — cracks are not range | Pass custom options |

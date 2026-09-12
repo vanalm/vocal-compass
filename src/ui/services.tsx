@@ -1,14 +1,21 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import {
   CuePlayer,
+  DEFAULT_LOW_CUT,
   IndexedDbTrialRepository,
   KpiCalculator,
+  LOW_CUT_OPTIONS,
   MemoryTrialRepository,
   MicrophoneEngine,
   Recommender,
   SyncClient,
   type TrialRepository,
 } from "../core";
+import { loadChoice } from "./hooks/persistentChoice";
+
+/** Where the microphone low-cut preference is saved, and its valid values. */
+export const MIC_LOW_CUT_KEY = "vc-mic-low-cut";
+export const MIC_LOW_CUT_IDS = LOW_CUT_OPTIONS.map((o) => o.id);
 
 const SYNC_URL =
   (import.meta.env?.VITE_SYNC_URL as string | undefined) ?? "http://localhost:8799";
@@ -33,9 +40,11 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
     const repository: TrialRepository = IndexedDbTrialRepository.isSupported()
       ? new IndexedDbTrialRepository()
       : new MemoryTrialRepository();
+    const microphone = new MicrophoneEngine();
+    microphone.setLowCut(loadChoice(MIC_LOW_CUT_KEY, MIC_LOW_CUT_IDS, DEFAULT_LOW_CUT));
     return {
       repository,
-      microphone: new MicrophoneEngine(),
+      microphone,
       cues: new CuePlayer(),
       kpi: new KpiCalculator(),
       recommender: new Recommender(),

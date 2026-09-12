@@ -1,3 +1,4 @@
+import { DEFAULT_LOW_CUT, applyLowCut, type LowCutSetting } from "./micFilter";
 import { PitchPipeline, type PitchFrame } from "./PitchPipeline";
 
 export type MicStatus = "idle" | "requesting" | "live" | "error";
@@ -24,6 +25,8 @@ export class MicrophoneEngine {
   private timer: number | null = null;
   private listeners = new Set<MicListener>();
   private _status: MicStatus = "idle";
+  private lowCut: LowCutSetting = DEFAULT_LOW_CUT;
+  private filter: BiquadFilterNode | null = null;
 
   constructor(
     private readonly pipeline: PitchPipeline = new PitchPipeline(),
@@ -32,6 +35,16 @@ export class MicrophoneEngine {
 
   get status(): MicStatus {
     return this._status;
+  }
+
+  get lowCutSetting(): LowCutSetting {
+    return this.lowCut;
+  }
+
+  /** Retunes live capture immediately and applies to every later start. */
+  setLowCut(setting: LowCutSetting): void {
+    this.lowCut = setting;
+    if (this.filter) applyLowCut(this.filter, setting);
   }
 
   subscribe(listener: MicListener): () => void {
@@ -60,17 +73,16 @@ export class MicrophoneEngine {
       await this.context.resume();
 
       const source = this.context.createMediaStreamSource(this.stream);
-      // Room/road rumble sits below the vocal range and pollutes both the
-      // RMS gate and low-lag correlation peaks; cut it before detection.
-      const highpass = this.context.createBiquadFilter();
-      highpass.type = "highpass";
-      highpass.frequency.value = 80;
-      highpass.Q.value = 0.707;
+      // Rumble below the vocal range pollutes both the RMS gate and low-lag
+      // correlation peaks, so a low-cut sits before detection.
+      const filter = this.context.createBiquadFilter();
+      applyLowCut(filter, this.lowCut);
+      this.filter = filter;
       const analyser = this.context.createAnalyser();
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0;
-      source.connect(highpass);
-      highpass.connect(analyser);
+      source.connect(filter);
+      filter.connect(analyser);
       const buffer = new Float32Array(analyser.fftSize);
       this.pipeline.reset();
       this.setStatus("live");
@@ -96,6 +108,7 @@ export class MicrophoneEngine {
     this.stream = null;
     void this.context?.close();
     this.context = null;
+    this.filter = null;
     this.pipeline.reset();
     if (this._status !== "error") this.setStatus("idle");
   }

@@ -8,9 +8,10 @@ import { TestScreen } from "./screens/TestScreen";
 import { ProtocolScreen } from "./screens/ProtocolScreen";
 import { RangeScreen } from "./screens/RangeScreen";
 import { QuestScreen } from "./screens/QuestScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import type { Lane } from "../core";
 
-type Screen = "today" | "test" | "quest" | "lab" | "range" | "progress" | "protocol";
+type Screen = "today" | "test" | "quest" | "lab" | "range" | "progress" | "protocol" | "settings";
 
 function Shell() {
   const [screen, setScreen] = useState<Screen>("today");
@@ -51,6 +52,13 @@ function Shell() {
               <p>Measure your singing, train with feedback, verify the change — methods from the research, data stays yours</p>
             </div>
           </div>
+          <button
+            className="vc-settings-link"
+            aria-current={screen === "settings" ? "page" : undefined}
+            onClick={() => setScreen("settings")}
+          >
+            Settings
+          </button>
         </header>
 
         {screen === "today" && (
@@ -78,6 +86,7 @@ function Shell() {
           <RangeScreen ranges={ranges} onSaveRange={saveRange} onSaveSession={saveSession} />
         )}
         {screen === "protocol" && <ProtocolScreen />}
+        {screen === "settings" && <SettingsScreen />}
       </div>
 
       <nav className="vc-nav" aria-label="Primary">

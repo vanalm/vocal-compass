@@ -104,6 +104,9 @@ export interface RangeStepResult {
   endedAt: number;
 }
 
+/** Microphone low-cut filter setting; options and trade-offs in core/pitch/micFilter.ts. */
+export type LowCutSetting = "off" | "60" | "80" | "100";
+
 /** One saved range measurement: the matched extremes, plus how they were found. */
 export interface RangeMeasurement {
   id: string;
@@ -112,6 +115,8 @@ export interface RangeMeasurement {
   highMidi: number;
   /** Absent on measurements saved before methods were recorded. */
   method?: RangeMethod;
+  /** The low-cut filter active while measuring; absent means the old fixed 80 Hz. */
+  micLowCut?: LowCutSetting;
   /** Every note attempted, in order — guided-turns measurements only. */
   steps?: RangeStepResult[];
   /** Pitch frames heard during the singer's turns, for per-frequency analysis. */
