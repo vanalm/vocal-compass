@@ -96,7 +96,7 @@ export function nextActions(
     daysOverdue: rangeGap == null ? 0 : Math.max(0, rangeGap - PROBE_EVERY_DAYS),
     detail:
       rangeGap == null
-        ? "No baseline measurement yet — a 45-second siren."
+        ? "No baseline measurement yet — about 2–3 minutes, guided note by note."
         : `Last measured ${rangeGap} day${rangeGap === 1 ? "" : "s"} ago; weekly keeps the trend honest.`,
   });
 

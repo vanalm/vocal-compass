@@ -60,6 +60,22 @@ describe("range measurement storage", () => {
     expect((await restored.ranges())[0].trace).toEqual([{ t: 0, midi: 50, clarity: 0.9 }]);
   });
 
+  it.each(repositoryCases())("%s: the method and per-note results round-trip", async (_, make) => {
+    const repo = make();
+    const steps = [
+      {
+        targetMidi: 57, direction: "anchor" as const, attempt: 1, hit: true, octaveOff: null,
+        sungMidi: 57.1, centsOff: 10, timeToMatchMs: 800, startedAt: 100, endedAt: 900,
+      },
+    ];
+    await repo.saveRange({ ...measurement("a", "2026-09-12T10:00:00.000Z"), method: "guided-turns", steps });
+    const restored = make();
+    await restored.importJson(await repo.exportJson());
+    const [back] = await restored.ranges();
+    expect(back.method).toBe("guided-turns");
+    expect(back.steps).toEqual(steps);
+  });
+
   it.each(repositoryCases())("%s: clear removes measurements too", async (_, make) => {
     const repo = make();
     await repo.saveRange(measurement("a", "2026-08-20T10:00:00.000Z"));

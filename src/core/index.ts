@@ -14,8 +14,9 @@ export {
   rangeChangeVerdict,
   MEANINGFUL_RANGE_CHANGE_ST,
   MEASUREMENT_DRIFT_ST,
+  compareRange,
 } from "./protocol/rangePlan";
-export type { RangePlan, RangeStep, RangeVerdict } from "./protocol/rangePlan";
+export type { RangeComparison, RangePlan, RangeStep, RangeVerdict } from "./protocol/rangePlan";
 export { degreeToMidi, pickTessituraTonic, realizePhrase } from "./phrase/realize";
 export type {
   ChordEvent,
@@ -49,8 +50,17 @@ export { NoiseFloorTracker } from "./pitch/NoiseFloorTracker";
 export type { NoiseFloorOptions } from "./pitch/NoiseFloorTracker";
 export { segmentTrace } from "./trial/segmentTrace";
 export { heldExtremes } from "./pitch/RangeAnalyzer";
-export { RangeWalk } from "./pitch/RangeWalk";
-export type { RangeWalkOptions, RangeWalkPhase, RangeWalkState } from "./pitch/RangeWalk";
+export { RangeWalk, RANGE_WALK_DEFAULTS } from "./pitch/RangeWalk";
+export type {
+  RangeWalkOptions,
+  RangeWalkSnapshot,
+  StepResult,
+  WalkDirection,
+  WalkEffect,
+  WalkPhase,
+} from "./pitch/RangeWalk";
+export { coachTip, resultLine, summarizeRangeWalk } from "./pitch/rangeCoach";
+export type { RangeWalkSummary } from "./pitch/rangeCoach";
 export type { HeldExtremes, RangeAnalyzerOptions } from "./pitch/RangeAnalyzer";
 export { practiceDays } from "./kpi/practiceTime";
 export { improvementSummary } from "./kpi/improvement";

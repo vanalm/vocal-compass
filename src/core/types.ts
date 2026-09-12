@@ -84,14 +84,37 @@ export interface TrialRecord extends AttemptAnalysis {
   createdAt: string;
 }
 
-/** One saved range-probe result: the held extremes of a siren/glide sweep. */
+/** How a range measurement was taken — different methods are not directly comparable. */
+export type RangeMethod = "glissando" | "guided-steps" | "guided-turns";
+
+/** One note attempted during a guided range walk. */
+export interface RangeStepResult {
+  targetMidi: number;
+  direction: "anchor" | "down" | "up";
+  attempt: number;
+  hit: boolean;
+  /** Held an octave above (+1) or below (-1) the target instead of the target. */
+  octaveOff: 1 | -1 | null;
+  /** Median pitch of the steadiest stretch sung, if any. */
+  sungMidi: number | null;
+  centsOff: number | null;
+  timeToMatchMs: number | null;
+  /** Client-clock ms when the turn opened and when it was judged; splits the trace per note. */
+  startedAt: number;
+  endedAt: number;
+}
+
+/** One saved range measurement: the matched extremes, plus how they were found. */
 export interface RangeMeasurement {
   id: string;
   createdAt: string;
   lowMidi: number;
   highMidi: number;
-  /** The full smoothed sweep, kept for per-frequency analysis over time.
-   * Optional: pre-existing measurements have no trace. */
+  /** Absent on measurements saved before methods were recorded. */
+  method?: RangeMethod;
+  /** Every note attempted, in order — guided-turns measurements only. */
+  steps?: RangeStepResult[];
+  /** Pitch frames heard during the singer's turns, for per-frequency analysis. */
   trace?: Array<{ t: number; midi: number; clarity: number; rms?: number }>;
 }
 

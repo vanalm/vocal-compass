@@ -17,6 +17,8 @@
  * they are the safe vehicle here, not the engine.
  */
 
+import type { RangeMeasurement } from "../types";
+
 export interface RangeStep {
   id: string;
   title: string;
@@ -128,4 +130,23 @@ export function rangeChangeVerdict(firstSt: number, latestSt: number): RangeVerd
     label = `A real loss of ${Math.abs(delta)} st — losing range is a health signal; worth a check with a clinician, not harder practice.`;
   }
   return { deltaSemitones: delta, direction, meaningful, label };
+}
+
+export interface RangeComparison {
+  verdict: RangeVerdict;
+  /** Set when the two measurements were taken with different methods. */
+  caveat: string | null;
+}
+
+type Comparable = Pick<RangeMeasurement, "lowMidi" | "highMidi" | "method">;
+
+/** Change in span between two measurements, flagged when methods differ. */
+export function compareRange(previous: Comparable | undefined, current: Comparable): RangeComparison | null {
+  if (!previous) return null;
+  const verdict = rangeChangeVerdict(previous.highMidi - previous.lowMidi, current.highMidi - current.lowMidi);
+  const caveat =
+    previous.method !== current.method
+      ? "The earlier measurement used a different method, so compare with caution."
+      : null;
+  return { verdict, caveat };
 }

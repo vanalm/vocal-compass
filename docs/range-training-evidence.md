@@ -15,11 +15,17 @@ code and this file together.
   "gains" are reported as within noise. `MEANINGFUL_RANGE_CHANGE_ST`.
 - Discrete half-steps elicit better extremes than glissando (Barrett 2020,
   J Voice 34:179, n=56) and ~10 trials with coaching saturate the measurement
-  (Ma & Li 2017). The probe implements this: tone-guided discrete semitone
-  steps (`RangeWalk`), anchor → floor → ceiling, a step counting only when
-  matched and held. (The original glissando probe is superseded; pre-existing
-  measurements used it — expect a one-time apparent jump when comparing across
-  the method change.)
+  (Ma & Li 2017). The probe implements this as turn-taking (`RangeWalk`,
+  method `guided-turns`): the app plays a note, pauses 1.2 s, then gives the
+  singer up to 5 s to find it and hold it for 0.5 s, one semitone per step —
+  starting note → floor → ceiling. Nothing is judged while the note sounds, so
+  the reference and the voice never overlap. Frames are judged unsmoothed so
+  breathy-but-steady edge notes still count; the 0.5 s hold is the spike
+  filter. A miss never advances on its own — the singer chooses to retry or
+  call the limit. Every attempt is stored with timing, cents, and wrong-octave
+  flags. Measurements record their `method`; comparisons across methods
+  (earlier glissando and first guided-steps probes) are flagged, not silently
+  mixed.
 - A phone cannot do a true voice range profile (frequency × calibrated dB);
   we honestly report semitones only. Same device + same method across
   measurements is the policy that matters (Printz 2017, JSLHR 60:3369).

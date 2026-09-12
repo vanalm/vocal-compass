@@ -1,28 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
-  RangeWalk,
+  coachTip,
+  compareRange,
   noteName,
-  type PitchSample,
+  resultLine,
+  summarizeRangeWalk,
   type RangeMeasurement,
-  type RangeWalkState,
+  type RangeWalkSnapshot,
 } from "../../core";
-import { MicMeter } from "./TrialStage";
-import { useServices } from "../services";
+import { useRangeWalk } from "../hooks/useRangeWalk";
+import { RangeLadder } from "./RangeLadder";
+import { CueIndicator, FlowModeToggle, MicMeter, useSpacebarAdvance } from "./TrialStage";
 
-const ANCHOR_FALLBACK_MIDI = 57; // A3 — reachable middle for most voices
+/** A comfortable middle for most adult voices (A3) when there is no history. */
+const DEFAULT_START_MIDI = 57;
 
-const TIPS: Record<RangeWalkState["phase"], string> = {
-  anchor: "Match this tone and hold it steady — any comfortable vowel or a hum.",
-  down: "Copy each lower tone. Gentle and quiet is fine; growly or breathy still counts.",
-  up: "Copy each higher tone. Stop before strain — the note you can hold is your range, the squeak is not.",
-  done: "Done.",
+const STAGE: Record<RangeWalkSnapshot["direction"], string> = {
+  anchor: "Step 1 of 3 · Starting note",
+  down: "Step 2 of 3 · Finding your lowest",
+  up: "Step 3 of 3 · Finding your highest",
+  done: "Done",
 };
 
 /**
- * Tone-guided range measurement: the app plays each semitone target, the
- * user copies it, and a step counts only when matched and held. Discrete
- * guided steps beat free sirening as measurement (Barrett 2020) and as UX —
- * nobody is left shooting in the dark. The full sweep is stored.
+ * Range measurement as a turn-taking walk: listen, pause, sing, see how it
+ * went, next note. Starts near the middle of the last measurement.
  */
 export function RangeProbe({
   ranges,
@@ -31,152 +33,244 @@ export function RangeProbe({
   ranges: RangeMeasurement[];
   onSave: (m: RangeMeasurement) => Promise<void>;
 }) {
-  const { microphone, cues } = useServices();
-  const [walkState, setWalkState] = useState<RangeWalkState | null>(null);
-  const [liveSample, setLiveSample] = useState<PitchSample | null>(null);
-  const [level, setLevel] = useState(0);
-  const [threshold, setThreshold] = useState(0.008);
-  const [tonePlaying, setTonePlaying] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const walk = useRef<RangeWalk | null>(null);
-  const sweep = useRef<Array<{ t: number; midi: number; clarity: number; rms?: number }>>([]);
-  const toneBusy = useRef(false);
-
-  // Anchor near the middle of the last measurement, else a common middle.
   const latest = ranges[ranges.length - 1];
-  const anchorMidi = latest ? Math.round((latest.lowMidi + latest.highMidi) / 2) : ANCHOR_FALLBACK_MIDI;
+  const startMidi = latest ? Math.round((latest.lowMidi + latest.highMidi) / 2) : DEFAULT_START_MIDI;
+  const walk = useRangeWalk(startMidi);
+  const [notice, setNotice] = useState<string | null>(null);
+  const s = walk.snap;
 
-  const playTone = async (midi: number) => {
-    if (toneBusy.current) return;
-    toneBusy.current = true;
-    setTonePlaying(true);
-    await cues.playNote(midi, 900);
-    setTonePlaying(false);
-    toneBusy.current = false;
-  };
-
-  useEffect(() => {
-    if (!walkState || walkState.phase === "done" || !walk.current) return;
-    const unsubscribe = microphone.subscribe({
-      onSample: (frame) => {
-        setLiveSample(frame.smoothed);
-        setLevel(frame.level);
-        setThreshold(frame.noise.threshold);
-        if (frame.smoothed) {
-          sweep.current.push({
-            t: frame.smoothed.at,
-            midi: frame.smoothed.midi,
-            clarity: frame.smoothed.clarity,
-            rms: frame.smoothed.rms,
-          });
-        }
-        // Don't judge the user against the reference tone's own audio.
-        if (toneBusy.current) return;
-        const result = walk.current!.feed(frame.smoothed?.midi ?? null, frame.smoothed?.at ?? Date.now());
-        const state = walk.current!.state;
-        setWalkState(state);
-        if (result.toneToPlay != null) void playTone(result.toneToPlay);
-        if (state.phase === "done") void finish(state);
-      },
-      onStatus: (status, error) => {
-        if (status === "error") {
-          setMessage(error ?? "Microphone failed.");
-          setWalkState(null);
-        }
-      },
-    });
-    void microphone.start();
-    return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walkState?.phase === "done" ? "done" : walkState ? "live" : "idle"]);
-
-  const begin = () => {
-    walk.current = new RangeWalk(anchorMidi);
-    sweep.current = [];
-    setMessage(null);
-    setWalkState(walk.current.state);
-    void playTone(anchorMidi);
-  };
-
-  const skip = () => {
-    if (!walk.current) return;
-    const result = walk.current.skipStep();
-    const state = walk.current.state;
-    setWalkState(state);
-    if (result.toneToPlay != null) void playTone(result.toneToPlay);
-    if (state.phase === "done") void finish(state);
-  };
-
-  const finish = async (state: RangeWalkState) => {
-    microphone.stop();
-    setLiveSample(null);
-    if (state.lowMidi == null || state.highMidi == null) {
-      setMessage("Nothing matched — try again; the anchor tone just needs a steady hold.");
-      setWalkState(null);
-      return;
-    }
+  const save = async () => {
+    if (!s || s.lowMidi === null || s.highMidi === null) return;
+    const { lowMidi, highMidi } = s;
     await onSave({
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      lowMidi: state.lowMidi,
-      highMidi: state.highMidi,
-      trace: sweep.current,
+      lowMidi,
+      highMidi,
+      method: "guided-turns",
+      steps: s.steps,
+      trace: [...walk.trace.current],
     });
-    setMessage(
-      `Saved: ${noteName(state.lowMidi)} – ${noteName(state.highMidi)} (${state.highMidi - state.lowMidi} st)`,
-    );
-    setWalkState(null);
+    setNotice(`Saved: ${noteName(lowMidi)} – ${noteName(highMidi)} (${highMidi - lowMidi} semitones).`);
+    walk.reset();
   };
 
-  if (!walkState) {
+  const primary: (() => void) | null = !s
+    ? null
+    : s.phase === "result"
+      ? s.lastResult?.hit
+        ? walk.next
+        : walk.retry
+      : s.phase === "turn"
+        ? walk.next
+        : s.phase === "done"
+          ? () => void save()
+          : null;
+  useSpacebarAdvance(primary);
+
+  if (!s) {
     return (
-      <div className="vc-range-probe">
-        <button className="vc-button primary" onClick={begin}>
-          Measure range
-        </button>
+      <div className="vc-range-probe" data-phase="idle">
+        <h4 className="vc-walk-title">Find your range</h4>
+        <ol className="vc-walk-howto">
+          <li>Listen to a note.</li>
+          <li>After a short pause, sing it back and hold it for half a second.</li>
+          <li>
+            Each success steps one note lower, until you press “That’s my lowest”. Then we go up the
+            same way.
+          </li>
+        </ol>
         <p className="vc-small">
-          Guided: the app plays a tone, you copy it, one semitone at a time — down to your floor,
-          then up to your ceiling. ~2 minutes.
+          Soft is fine. Stop at anything that feels strained. About 2–3 minutes. Headphones optional —
+          the note and your turn never overlap.
         </p>
-        {message && <p className="vc-small">{message}</p>}
+        <div className="vc-actions">
+          <button className="vc-button primary" onClick={() => void walk.start()}>
+            Start
+          </button>
+          <FlowModeToggle mode={walk.flowMode} onChange={walk.setFlowMode} />
+          <span className="vc-small">
+            {walk.flowMode === "auto"
+              ? "Moves to the next note by itself after each success."
+              : "After each note you press Next — or the spacebar."}
+          </span>
+        </div>
+        {walk.micError && <p className="vc-small vc-error">{walk.micError}</p>}
+        {notice && <p className="vc-small">{notice}</p>}
       </div>
     );
   }
 
-  const held = walkState.matchProgress;
-  const direction = walkState.phase === "down" ? "▼ heading down" : walkState.phase === "up" ? "▲ heading up" : "anchor";
-
-  return (
-    <div className="vc-range-probe">
-      <div className="vc-walk">
-        <div className="vc-walk-target">
-          <span className="vc-small">{tonePlaying ? "Listen…" : "Copy this tone"}</span>
-          <strong>{noteName(walkState.targetMidi)}</strong>
-          <span className="vc-walk-direction">{direction}</span>
+  if (s.phase === "done") {
+    const summary = summarizeRangeWalk(s.steps);
+    if (!summary) {
+      return (
+        <div className="vc-range-probe" data-phase="done">
+          <h4 className="vc-walk-title">No notes matched</h4>
+          <p className="vc-small">
+            Nothing was held long enough to count. Try again somewhere quieter, holding each note for
+            half a second.
+          </p>
+          <div className="vc-actions">
+            <button className="vc-button primary" onClick={walk.reset}>
+              Back
+            </button>
+          </div>
         </div>
-        <div className="vc-walk-hold" aria-label="Hold progress">
-          {[0, 1, 2, 3].map((i) => (
-            <i key={i} className={held > i / 4 ? "on" : ""} />
-          ))}
-        </div>
-        <MicMeter level={level} threshold={threshold} sample={liveSample} />
-        <p className="vc-small">{TIPS[walkState.phase]}</p>
+      );
+    }
+    const comparison = compareRange(latest, {
+      lowMidi: summary.lowMidi,
+      highMidi: summary.highMidi,
+      method: "guided-turns",
+    });
+    return (
+      <div className="vc-range-probe" data-phase="done">
+        <h4 className="vc-walk-title">
+          Your range today: {noteName(summary.lowMidi)} – {noteName(summary.highMidi)}
+        </h4>
         <p className="vc-small">
-          So far:{" "}
-          {walkState.lowMidi != null && walkState.highMidi != null
-            ? `${noteName(walkState.lowMidi)} – ${noteName(walkState.highMidi)}`
-            : "match the anchor to begin"}
+          {summary.spanSemitones} semitones · {s.steps.length} notes tried
         </p>
+        <RangeLadder anchorMidi={s.anchorMidi} targetMidi={null} steps={s.steps} />
+        {summary.insights.length > 0 && (
+          <ul className="vc-walk-insights">
+            {summary.insights.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {comparison && (
+          <p className="vc-small">
+            Compared with last time: {comparison.verdict.label}
+            {comparison.caveat ? ` ${comparison.caveat}` : ""}
+          </p>
+        )}
         <div className="vc-actions">
-          <button className="vc-button" onClick={() => void playTone(walkState.targetMidi)} disabled={tonePlaying}>
-            Hear it again
+          <button className="vc-button primary" onClick={() => void save()}>
+            Save measurement
           </button>
-          <button className="vc-button" onClick={skip}>
-            {walkState.phase === "up" ? "That’s my ceiling" : walkState.phase === "down" ? "That’s my floor" : "Skip"}
+          <button className="vc-button" onClick={walk.reset}>
+            Discard
           </button>
         </div>
       </div>
-      {message && <p className="vc-small">{message}</p>}
+    );
+  }
+
+  const r = s.lastResult;
+  const target = noteName(s.targetMidi);
+  const endLabel = s.direction === "down" ? "That’s my lowest" : s.direction === "up" ? "That’s my highest" : null;
+  const bannerTone =
+    s.phase === "sing" ? "sing" : s.phase === "result" ? (r?.hit ? "good" : "bad") : s.phase === "turn" ? "good" : "";
+
+  return (
+    <div className="vc-range-probe" data-phase={s.phase} data-target-midi={s.targetMidi}>
+      <div className="vc-walk-header">
+        <span className="vc-walk-stage">{STAGE[s.direction]}</span>
+        <FlowModeToggle mode={walk.flowMode} onChange={walk.setFlowMode} />
+      </div>
+
+      <RangeLadder
+        anchorMidi={s.anchorMidi}
+        targetMidi={s.phase === "turn" ? null : s.targetMidi}
+        steps={s.steps}
+      />
+      <p className="vc-small">
+        So far:{" "}
+        {s.lowMidi !== null && s.highMidi !== null
+          ? `${noteName(s.lowMidi)} – ${noteName(s.highMidi)}`
+          : "nothing matched yet"}
+      </p>
+
+      <div className={`vc-walk-banner ${bannerTone}`}>
+        {s.phase === "listen" && (
+          <>
+            <span className="vc-walk-label">Listen</span>
+            <strong className="vc-walk-note">{target}</strong>
+            <CueIndicator playing={walk.tonePlaying} label="Playing the note…" />
+          </>
+        )}
+        {s.phase === "ready" && (
+          <>
+            <span className="vc-walk-label">Get ready</span>
+            <strong className="vc-walk-note">{target}</strong>
+            <div className="vc-walk-bar">
+              <i style={{ width: `${(1 - s.readyProgress) * 100}%` }} />
+            </div>
+          </>
+        )}
+        {s.phase === "sing" && (
+          <>
+            <span className="vc-walk-label">Your turn — sing it</span>
+            <strong className="vc-walk-note">{target}</strong>
+            <div className="vc-walk-hold" aria-label="Hold progress">
+              <i style={{ width: `${s.holdProgress * 100}%` }} />
+            </div>
+            <span className="vc-small">
+              {s.holdProgress > 0 ? "Hold it…" : "Find the note and hold it steady"}
+            </span>
+            <MicMeter level={walk.level} threshold={walk.threshold} sample={walk.sample} />
+            <div className="vc-walk-timer" aria-label="Time left">
+              <i style={{ width: `${(1 - s.singProgress) * 100}%` }} />
+            </div>
+          </>
+        )}
+        {s.phase === "result" && r && (
+          <>
+            <span className={`vc-walk-label ${r.hit ? "good" : "bad"}`}>{r.hit ? "✓ Matched" : "✗ Not yet"}</span>
+            <strong className="vc-walk-result">{resultLine(r)}</strong>
+            {r.hit && walk.flowMode === "auto" && <span className="vc-small">Next note in a moment…</span>}
+          </>
+        )}
+        {s.phase === "turn" && (
+          <>
+            <span className="vc-walk-label good">Lowest found</span>
+            <strong className="vc-walk-note">{s.lowMidi !== null ? noteName(s.lowMidi) : "—"}</strong>
+            <span className="vc-small">
+              {s.endedAtLimit ? "That’s as low as this microphone hears reliably. " : ""}
+              Now the same thing going up, starting just above your first note.
+            </span>
+          </>
+        )}
+      </div>
+
+      <p className="vc-walk-tip">
+        <span>Tip</span>
+        {coachTip(s)}
+      </p>
+
+      <div className="vc-actions">
+        {(s.phase === "ready" || s.phase === "sing") && (
+          <button className="vc-button" disabled={walk.tonePlaying} onClick={walk.hearAgain}>
+            Hear it again
+          </button>
+        )}
+        {s.phase === "result" && r?.hit && (
+          <button className="vc-button primary" onClick={walk.next}>
+            Next note
+          </button>
+        )}
+        {s.phase === "result" && r && !r.hit && (
+          <button className="vc-button primary" onClick={walk.retry}>
+            Try again
+          </button>
+        )}
+        {s.phase === "turn" && (
+          <button className="vc-button primary" onClick={walk.next}>
+            Continue
+          </button>
+        )}
+        {endLabel && s.phase !== "turn" && (
+          <button className="vc-button" onClick={walk.endDirection}>
+            {endLabel}
+          </button>
+        )}
+        <button className="vc-button" onClick={walk.reset}>
+          Stop
+        </button>
+      </div>
+      {walk.micError && <p className="vc-small vc-error">{walk.micError}</p>}
     </div>
   );
 }

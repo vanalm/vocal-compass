@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  rangeChangeVerdict,
+  compareRange,
   vocalFunctionExercises,
   type ExerciseSession,
   type RangeMeasurement,
@@ -27,9 +27,7 @@ export function RangeScreen({
   const [done, setDone] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState(false);
 
-  const span = (m: RangeMeasurement) => m.highMidi - m.lowMidi;
-  const verdict =
-    ranges.length >= 2 ? rangeChangeVerdict(span(ranges[0]), span(ranges[ranges.length - 1])) : null;
+  const comparison = ranges.length >= 2 ? compareRange(ranges[0], ranges[ranges.length - 1]) : null;
 
   const toggle = (id: string) => {
     setDone((prev) => {
@@ -59,14 +57,22 @@ export function RangeScreen({
           <h3>Measure</h3>
         </div>
         <p className="vc-small">
-          Guided tone-matching, one semitone at a time — the discrete-step protocol measures better
-          than free sirening. Weekly is enough: repeat measurements drift ~1.4 st on their own, so a
-          real change must clear ~3 st.
+          Measure about once a week. Repeat measurements drift about 1.4 semitones on their own, so a
+          real change has to clear about 3.
         </p>
         <RangeChart ranges={ranges} />
-        {verdict && (
-          <p className={`vc-small vc-verdict-${verdict.meaningful ? (verdict.direction === "down" ? "bad" : "good") : "flat"}`}>
-            {verdict.label}
+        {comparison && (
+          <p
+            className={`vc-small vc-verdict-${
+              comparison.verdict.meaningful
+                ? comparison.verdict.direction === "down"
+                  ? "bad"
+                  : "good"
+                : "flat"
+            }`}
+          >
+            Since your first measurement: {comparison.verdict.label}
+            {comparison.caveat ? ` ${comparison.caveat}` : ""}
           </p>
         )}
         <RangeProbe ranges={ranges} onSave={onSaveRange} />
