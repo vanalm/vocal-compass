@@ -55,7 +55,11 @@ export function TodayScreen({
           <span className="vc-eyebrow">
             <span className="vc-dot" /> Today
           </span>
-          <h2>Train the destination, not just the landing.</h2>
+          <h2>Measure. Train. Verify.</h2>
+          <p className="vc-today-sub">
+            Science-backed singing practice: every exercise is measured, feedback follows the
+            evidence, and progress only counts against your own baseline.
+          </p>
           <p className="vc-today-status">
             Active {weekDays} day{weekDays === 1 ? "" : "s"} this week
             {minutesToday > 0 ? ` · ${minutesToday} min today` : " · nothing yet today"}
@@ -84,13 +88,20 @@ export function TodayScreen({
           </div>
           <div>
             <strong>2 · Practice</strong>
-            <p>Short daily work: pitch trials in the Lab, range exercises on the Range screen.</p>
+            <p>Short daily work: pitch trials, phrases in Quest, range exercises.</p>
           </div>
           <div>
             <strong>3 · Progress</strong>
             <p>Charts compare you only to your own baseline — and say when a change is real.</p>
           </div>
         </div>
+        <ul className="vc-principles">
+          <li>Every attempt is measured. Numbers, not impressions.</li>
+          <li>Feedback follows the evidence: guides help early, fade as you pass, and measurement is blind.</li>
+          <li>Verified means cold — first take, no guide. Retries improve practice numbers only.</li>
+          <li>A change must beat measurement noise before it is called a change.</li>
+          <li>The mic hears pitch and timing, not strain. Comfort is the limit; ease beats loudness.</li>
+        </ul>
       </section>
     </div>
   );

@@ -265,3 +265,6 @@ button { cursor: pointer; }
 .vc-quest-chord { color: #8ce8bd !important; }
 .vc-quest-keep { color: #53d69e; font-size: 13px; margin: 10px 0 0; }
 .vc-quest-fix { color: #ffd6ad; font-size: 13px; margin: 4px 0 0; }
+.vc-today-sub { color: #a8bbb4; font-size: 15px; line-height: 1.5; max-width: 620px; margin-top: 10px; }
+.vc-principles { margin: 16px 0 0; padding: 0 0 0 18px; display: grid; gap: 6px; }
+.vc-principles li { color: #8fa69e; font-size: 12.5px; line-height: 1.5; }

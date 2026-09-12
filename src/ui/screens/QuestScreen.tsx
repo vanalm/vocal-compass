@@ -69,7 +69,11 @@ export function QuestScreen({
           {levels.map((level) => (
             <div key={level} className="vc-quest-level">
               <p className="vc-small">
-                {level === 1 ? "Level 1 — Find Home" : level === 2 ? "Level 2 — Run Lab" : "Level 3 — Number Navigator"}
+                {level === 1
+                  ? "Level 1 — Find Home. Copy short cells around the tonic. Measures degree accuracy near home."
+                  : level === 2
+                    ? "Level 2 — Run Lab. Copy fast note runs. Measures agility: clean notes and even timing, not speed for its own sake."
+                    : "Level 3 — Number Navigator. Sing a chord tone through a progression. Measures hearing chords as numbers."}
               </p>
               <div className="vc-quest-grid">
                 {library

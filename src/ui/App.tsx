@@ -48,7 +48,7 @@ function Shell() {
             <div className="vc-mark">◈</div>
             <div>
               <h1>Vocal Compass</h1>
-              <p>Melodic navigation trainer — local-first, optional sync</p>
+              <p>Measure your singing, train with feedback, verify the change — methods from the research, data stays yours</p>
             </div>
           </div>
         </header>

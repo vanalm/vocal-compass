@@ -6,7 +6,7 @@ import { Exercise, type CuePlan, type TrialRequest } from "./Exercise";
 export class DirectEcho extends Exercise {
   readonly id = "echo";
   readonly title = "Direct echo";
-  readonly subtitle = "Hear a single note, then land it immediately.";
+  readonly subtitle = "Hear one note, sing it back. Measures bare pitch matching — the base skill.";
   readonly measures = "Correct-target intonation residual, range anomalies";
   readonly defaultFeedback: FeedbackMode = "live";
 
@@ -32,7 +32,7 @@ export class DirectEcho extends Exercise {
 export class RouteReplay extends Exercise {
   readonly id = "route";
   readonly title = "Route replay";
-  readonly subtitle = "Hear start → destination, then reproduce the destination from the start alone.";
+  readonly subtitle = "Hear a note travel to a destination, then sing the destination yourself. Measures intervals — what melodies are made of.";
   readonly measures = "Destination selection, direction, latency, hint dependence";
   readonly defaultFeedback: FeedbackMode = "commit";
 
@@ -56,7 +56,7 @@ export class RouteReplay extends Exercise {
 export class SilentMap extends Exercise {
   readonly id = "silent";
   readonly title = "Silent map";
-  readonly subtitle = "Hold a target internally through a silent delay before singing it.";
+  readonly subtitle = "Hold the target through silence, then sing it. Measures whether a note survives without sound.";
   readonly measures = "Auditory retention curve and target availability";
   readonly defaultFeedback: FeedbackMode = "blind";
 
@@ -82,7 +82,7 @@ export class SilentMap extends Exercise {
 export class TonalNorth extends Exercise {
   readonly id = "tonal";
   readonly title = "Tonal north";
-  readonly subtitle = "Use key context to navigate from the current note to a scale location.";
+  readonly subtitle = "Find a scale degree from the key alone. Measures navigating by key instead of by echo.";
   readonly measures = "Scale-location confusion and independent navigation";
   readonly defaultFeedback: FeedbackMode = "commit";
 
@@ -106,7 +106,7 @@ export class TonalNorth extends Exercise {
 export class MissingNote extends Exercise {
   readonly id = "missing";
   readonly title = "Missing note";
-  readonly subtitle = "Hear a short phrase, then supply its omitted destination in context.";
+  readonly subtitle = "Supply the missing last note of a phrase. Measures whether the key predicts notes you never heard.";
   readonly measures = "Phrase retrieval, prediction, and musical transfer";
   readonly defaultFeedback: FeedbackMode = "blind";
 
