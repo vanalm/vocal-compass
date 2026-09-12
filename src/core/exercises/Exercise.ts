@@ -5,18 +5,51 @@ export type Difficulty = "steps" | "thirds" | "leaps" | "mixed";
 
 /** What the cue player should sound before an attempt. */
 export interface CuePlan {
-  /** Whether the tonic cadence sounds first. Echo skips it: bare-target
-   * imitation is the measurement, and extra pitches before the target are
-   * interference, not context. */
+  /** Whether the tonic chord sounds first. Only a module whose task IS the
+   * key plays it: any other tone before an attempt is interference, not
+   * context — intervening tones disrupt pitch memory (Deutsch 1970). */
   playCadence: boolean;
-  /** Ordered context notes (tonic, cadence, phrase…). */
+  /** Ordered context notes (tonic, phrase…). */
   contextMidis: number[];
+  /** What each context note is, shown while it sounds — one per note. */
+  cueLabels: string[];
   /** Whether the start note is sounded at the go-signal. */
   playStartAtGo: boolean;
+  /** What the go-signal note is; present exactly when one plays. */
+  goLabel?: string;
   /** Whether the target itself is sounded during acquisition. */
   revealTarget: boolean;
-  /** Spoken/visible instruction for the Imagine phase. */
+  /** The instruction on screen for the whole trial. */
   prompt: string;
+}
+
+/** One claim about the brain, with the study it rests on. */
+export interface ScienceNote {
+  point: string;
+  source: string;
+}
+
+/**
+ * Everything a singer needs to understand a module: the task, the mechanism
+ * it trains, why that matters, and the neuroscience behind it. The single
+ * source for every instruction surface — test intro, info modal, Lab — so
+ * they can never disagree.
+ */
+export interface ExerciseGuide {
+  /** The whole task in one sentence. */
+  task: string;
+  /** What happens, in order: every sound you will hear and your part. */
+  steps: string[];
+  /** Short name of the mechanism, for compact places. */
+  skill: string;
+  /** The mechanism trained. */
+  trains: string;
+  /** Why it matters when singing real music. */
+  why: string;
+  /** The neuroscience in one or two sentences. */
+  brain: string;
+  science: ScienceNote[];
+  tips: string[];
 }
 
 export interface TrialRequest {
@@ -28,7 +61,8 @@ export interface TrialRequest {
 
 /**
  * An Exercise owns everything specific to one training module:
- * how trials are generated, what is cued, and the default feedback policy.
+ * how trials are generated, what is cued, the default feedback policy, and
+ * the guide that explains it.
  *
  * To add a module: subclass, implement the abstract members, and register
  * it in `registry.ts`. Nothing else in the app changes.
@@ -40,6 +74,7 @@ export abstract class Exercise {
   abstract readonly measures: string;
   /** PRD §10.2 default feedback policy for this skill. */
   abstract readonly defaultFeedback: FeedbackMode;
+  abstract readonly guide: ExerciseGuide;
 
   abstract createTrial(request: TrialRequest): TrialDefinition;
   abstract cuePlan(trial: TrialDefinition): CuePlan;

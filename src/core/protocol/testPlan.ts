@@ -1,13 +1,16 @@
 import type { FeedbackMode } from "../types";
+import type { Difficulty } from "../exercises/Exercise";
 
+/**
+ * One step of the test. Instructions are not stored here: they come from the
+ * exercise's own guide, so the test, the info modal, and the Lab always say
+ * the same thing.
+ */
 export interface TestStep {
   exerciseId: string;
-  /** What you will do — one sentence, no jargon. */
-  what: string;
-  /** Why it is being measured — one sentence. */
-  why: string;
   trialCount: number;
   feedbackMode: FeedbackMode;
+  difficulty: Difficulty;
   delayMs: number;
 }
 
@@ -33,47 +36,19 @@ export interface TestProgress {
  * with the live display on measures the display, not the singer.
  */
 export function baselineTestPlan(): TestPlan {
+  const step = (exerciseId: string, delayMs = 0): TestStep => ({
+    exerciseId,
+    trialCount: 3,
+    feedbackMode: "blind",
+    difficulty: "steps",
+    delayMs,
+  });
   const steps: TestStep[] = [
-    {
-      exerciseId: "echo",
-      what: "Hear one note and sing it straight back.",
-      why: "It separates plain pitch-matching from everything that needs memory or context.",
-      trialCount: 3,
-      feedbackMode: "blind",
-      delayMs: 0,
-    },
-    {
-      exerciseId: "route",
-      what: "Hear a start note travel to a destination, then sing that destination from the start alone.",
-      why: "Melodic intervals are what songs are actually made of, and they improve faster than single notes.",
-      trialCount: 3,
-      feedbackMode: "blind",
-      delayMs: 0,
-    },
-    {
-      exerciseId: "tonal",
-      what: "Use the key you just heard to find a named scale degree.",
-      why: "It shows whether you navigate from the key itself rather than only from the last note you heard.",
-      trialCount: 3,
-      feedbackMode: "blind",
-      delayMs: 0,
-    },
-    {
-      exerciseId: "silent",
-      what: "Hold the target in your head through two seconds of silence, then sing it.",
-      why: "Silence is where a target is lost, so this measures whether it survives without a sounding reference.",
-      trialCount: 3,
-      feedbackMode: "blind",
-      delayMs: 2000,
-    },
-    {
-      exerciseId: "missing",
-      what: "Hear a phrase with its last note removed and supply the note that belongs there.",
-      why: "It tests whether the key and phrase together predict a destination you were never given.",
-      trialCount: 3,
-      feedbackMode: "blind",
-      delayMs: 0,
-    },
+    step("echo"),
+    step("route"),
+    step("tonal"),
+    step("silent", 2000),
+    step("missing"),
   ];
   return {
     id: "baseline",

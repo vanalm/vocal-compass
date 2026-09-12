@@ -14,6 +14,7 @@ import { useTrialRunner, type RunnerSettings } from "../hooks/useTrialRunner";
 import { PitchReadout } from "../components/PitchReadout";
 import { CueIndicator, FlowModeToggle, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
 import { TraceChart } from "../components/TraceChart";
+import { ExerciseInfoModal, InfoButton } from "../components/ExerciseInfo";
 
 const DELAYS = [0, 2000, 5000, 8000];
 const INTENTS: Array<{ id: IntentLabel; label: string }> = [
@@ -45,6 +46,7 @@ export function LabScreen({
   const [effort, setEffort] = useState(2);
   const [register, setRegister] = useState<RegisterLabel>("unknown");
   const [showRescue, setShowRescue] = useState(false);
+  const [info, setInfo] = useState<{ interrupted: boolean } | null>(null);
 
   const runner = useTrialRunner(save);
   const exercise = exercises.get(settings.exerciseId);
@@ -57,14 +59,25 @@ export function LabScreen({
     void runner.start(settings, confidence);
   };
 
+  const openInfo = () => {
+    // A trial can't run under the guide: opening it mid-trial discards that trial.
+    const interrupted = runner.phase === "listen" || runner.phase === "imagine" || runner.phase === "sing";
+    if (interrupted) {
+      runner.discard();
+      setShowRescue(false);
+    }
+    setInfo({ interrupted });
+  };
+
   const saveTrial = () => {
     void runner.complete({ intent, effort, register });
     setIntent(null);
     setShowRescue(false);
   };
 
-  const primaryAction =
-    runner.phase === "idle"
+  const primaryAction = info
+    ? null
+    : runner.phase === "idle"
       ? begin
       : runner.phase === "imagine" && runner.remainingDelayMs <= 0 && !runner.cuePlaying
         ? runner.commit
@@ -148,6 +161,10 @@ export function LabScreen({
       <section className="vc-card vc-stage">
         <div className="vc-stage-head">
           <span className="vc-phase">{runner.phase === "idle" ? "ready" : runner.phase}</span>
+          <span className="vc-lab-guide">
+            {exercise.title}
+            <InfoButton label={`How ${exercise.title} works`} onClick={openInfo} />
+          </span>
           <FlowModeToggle mode={runner.flowMode} onChange={runner.setFlowMode} />
           <span className={`vc-mic ${runner.micStatus === "live" ? "live" : ""}`}>
             ● mic {runner.micStatus}
@@ -159,7 +176,9 @@ export function LabScreen({
           <div className="vc-prompt" style={{ marginTop: 90 }}>
             <h3>{exercise.title}</h3>
             <p>{exercise.subtitle}</p>
-            <p className="vc-small" style={{ marginTop: 10 }}>Use headphones so cues don’t leak into the microphone.</p>
+            <p className="vc-small" style={{ marginTop: 10 }}>
+              {exercise.guide.task} Use headphones so cues don’t leak into the microphone.
+            </p>
             <div className="vc-actions vc-center-actions">
               <button className="vc-button primary" onClick={begin}>Start trial</button>
             </div>
@@ -170,7 +189,7 @@ export function LabScreen({
           <div className="vc-prompt" style={{ marginTop: 110 }}>
             <h3>Listen</h3>
             <p>Key of {trial?.keyName}.</p>
-            <CueIndicator playing={runner.cuePlaying} />
+            <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? undefined} />
           </div>
         )}
 
@@ -178,7 +197,7 @@ export function LabScreen({
           <div className="vc-prompt" style={{ marginTop: 60 }}>
             <h3>Imagine</h3>
             <p>{runner.prompt}</p>
-            <CueIndicator playing={runner.cuePlaying} />
+            <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? undefined} />
             {runner.remainingDelayMs > 0 ? (
               <p className="vc-small" style={{ marginTop: 12 }}>
                 Hold it silently… {(runner.remainingDelayMs / 1000).toFixed(1)} s
@@ -336,6 +355,15 @@ export function LabScreen({
           <p className="vc-small">Start a trial to see its context here. The destination stays hidden until review.</p>
         )}
       </section>
+
+      {info && (
+        <ExerciseInfoModal
+          exercise={exercise}
+          delayMs={settings.delayMs}
+          notice={info.interrupted ? "That trial was stopped and discarded. Start a new one when you're ready." : undefined}
+          onClose={() => setInfo(null)}
+        />
+      )}
     </div>
   );
 }

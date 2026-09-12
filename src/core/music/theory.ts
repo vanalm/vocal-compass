@@ -55,3 +55,12 @@ export function stdDev(values: number[]): number {
   const avg = mean(values);
   return Math.sqrt(mean(values.map((v) => (v - avg) ** 2)));
 }
+
+/**
+ * MIDI note of a zero-based diatonic degree in a major key. Degrees past 6
+ * or below 0 continue into the neighbouring octaves (7 = the octave above).
+ */
+export function diatonicMidi(tonicMidi: number, degree: number): number {
+  const index = ((degree % 7) + 7) % 7;
+  return tonicMidi + 12 * Math.floor(degree / 7) + MAJOR_SCALE[index];
+}

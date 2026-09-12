@@ -8,6 +8,10 @@ import type { RealizedPhrase } from "../phrase/realize";
  */
 export class CuePlayer {
   private context: AudioContext | null = null;
+  /** Every oscillator sounding or scheduled, so stop() can silence them. */
+  private readonly voices = new Set<OscillatorNode>();
+  /** Bumped by stop(); a sequence started before it ends early. */
+  private generation = 0;
 
   private async ctx(): Promise<AudioContext> {
     if (!this.context) {
@@ -33,6 +37,7 @@ export class CuePlayer {
     amp.gain.setValueAtTime(gain, now + seconds - 0.08);
     amp.gain.linearRampToValueAtTime(0.0001, now + seconds);
     osc.connect(amp).connect(ctx.destination);
+    this.track(osc);
     osc.start(now);
     osc.stop(now + seconds + 0.02);
     await this.wait(durationMs + 60);
@@ -56,6 +61,7 @@ export class CuePlayer {
     amp.gain.setValueAtTime(gain, Math.max(whenS + 0.03, whenS + durS - 0.08));
     amp.gain.linearRampToValueAtTime(0.0001, whenS + durS);
     osc.connect(amp).connect(ctx.destination);
+    this.track(osc);
     osc.start(whenS);
     osc.stop(whenS + durS + 0.02);
   }
@@ -99,7 +105,9 @@ export class CuePlayer {
 
   /** Play an ordered sequence with a small gap between notes. */
   async playSequence(midis: number[], noteMs = 600, gapMs = 120): Promise<void> {
+    const generation = this.generation;
     for (const midi of midis) {
+      if (this.generation !== generation) return;
       await this.playNote(midi, noteMs);
       await this.wait(gapMs);
     }
@@ -118,10 +126,29 @@ export class CuePlayer {
       amp.gain.linearRampToValueAtTime(0.09, now + 0.03);
       amp.gain.linearRampToValueAtTime(0.0001, now + 1.15);
       osc.connect(amp).connect(ctx.destination);
+      this.track(osc);
       osc.start(now);
       osc.stop(now + 1.2);
     }
     await this.wait(1250);
+  }
+
+  /** Silence everything now — a trial abandoned mid-cue, a demo closed. */
+  stop(): void {
+    this.generation += 1;
+    for (const osc of this.voices) {
+      try {
+        osc.stop();
+      } catch {
+        /* already stopped */
+      }
+    }
+    this.voices.clear();
+  }
+
+  private track(osc: OscillatorNode): void {
+    this.voices.add(osc);
+    osc.onended = () => this.voices.delete(osc);
   }
 
   private wait(ms: number): Promise<void> {

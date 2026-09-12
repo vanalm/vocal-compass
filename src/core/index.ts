@@ -6,7 +6,7 @@ export { RescueLadder, RESCUE_LEVELS, RECOVERY_SCRIPT } from "./trial/RescueLadd
 export { TrialSession } from "./trial/TrialSession";
 export type { TrialPhase } from "./trial/TrialSession";
 export { Exercise } from "./exercises/Exercise";
-export type { CuePlan, TrialRequest, Difficulty } from "./exercises/Exercise";
+export type { CuePlan, TrialRequest, Difficulty, ExerciseGuide, ScienceNote } from "./exercises/Exercise";
 export { exercises } from "./exercises/registry";
 export { baselineTestPlan, testProgress } from "./protocol/testPlan";
 export {

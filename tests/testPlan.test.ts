@@ -22,14 +22,17 @@ describe("baselineTestPlan", () => {
     }
   });
 
-  it("gives each step exactly one what sentence and one why sentence", () => {
+  it("instructs from each exercise's own guide, so the test and the info modal never disagree", () => {
     for (const step of plan.steps) {
-      for (const line of [step.what, step.why]) {
-        expect(line.length).toBeGreaterThan(10);
-        // One sentence: a single terminating period, at the very end.
-        expect(line.trim().endsWith(".")).toBe(true);
-        expect(line.replace(/\.$/, "").includes(".")).toBe(false);
-      }
+      const { guide } = exercises.get(step.exerciseId);
+      expect(guide.task.length).toBeGreaterThan(10);
+      expect(guide.steps.length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("holds the silent step for a real retention delay and no other", () => {
+    for (const step of plan.steps) {
+      expect(step.delayMs > 0).toBe(step.exerciseId === "silent");
     }
   });
 
