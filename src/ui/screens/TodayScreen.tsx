@@ -3,6 +3,7 @@ import {
   practiceDays,
   type ExerciseSession,
   type Lane,
+  type PhraseRecord,
   type RangeMeasurement,
   type TrialRecord,
 } from "../../core";
@@ -19,11 +20,13 @@ export function TodayScreen({
   trials,
   ranges,
   sessions,
+  phraseRecords,
   onGo,
 }: {
   trials: TrialRecord[];
   ranges: RangeMeasurement[];
   sessions: ExerciseSession[];
+  phraseRecords: PhraseRecord[];
   onGo: (lane: Lane) => void;
 }) {
   const { kpi } = useServices();
@@ -37,6 +40,7 @@ export function TodayScreen({
     ...trials.map((t) => t.createdAt),
     ...ranges.map((r) => r.createdAt),
     ...sessions.map((s) => s.createdAt),
+    ...phraseRecords.map((r) => r.createdAt),
   ]);
   const minutesToday = days.find((d) => d.date === dayKey(today))?.minutes ?? 0;
   const weekDays = days.filter((d) => {

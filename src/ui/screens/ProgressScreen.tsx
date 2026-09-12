@@ -6,6 +6,7 @@ import {
   practiceDays,
   type ExerciseSession,
   type Lane,
+  type PhraseRecord,
   type RangeMeasurement,
   type TrialRecord,
 } from "../../core";
@@ -20,6 +21,7 @@ export function ProgressScreen({
   trials,
   ranges,
   sessions,
+  phraseRecords,
   onGo,
   onDeleteTrial,
   onSynced,
@@ -29,6 +31,7 @@ export function ProgressScreen({
   trials: TrialRecord[];
   ranges: RangeMeasurement[];
   sessions: ExerciseSession[];
+  phraseRecords: PhraseRecord[];
   onGo: (lane: Lane) => void;
   onDeleteTrial: (id: string) => Promise<void>;
   onSynced: () => Promise<void>;
@@ -44,6 +47,7 @@ export function ProgressScreen({
   const days = practiceDays([
     ...trials.map((t) => t.createdAt),
     ...ranges.map((r) => r.createdAt),
+    ...phraseRecords.map((r) => r.createdAt),
   ]);
 
   const lanes = nextActions(new Date(), trials, ranges, sessions);

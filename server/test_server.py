@@ -200,3 +200,33 @@ class TestTombstones:
         client.post("/sync", json={"trials": [], "ranges": [], "tombstones": [stone("t1")]}, headers=alice)
         body = client.post("/sync", json={"trials": [], "ranges": []}, headers=bob).json()
         assert [t["id"] for t in body["trials"]] == ["t1"]
+
+
+class TestPhraseSync:
+    def test_phrases_round_trip(self, client):
+        headers = sign_in(client)
+        pushed = client.post(
+            "/sync",
+            json={"trials": [], "ranges": [], "phrases": [
+                {"id": "p1", "createdAt": "2026-09-10T10:00:00.000Z", "phraseId": "l1-arc-13531", "sequenceAccuracy": 0.8}
+            ]},
+            headers=headers,
+        )
+        assert pushed.status_code == 200
+        assert [p["id"] for p in pushed.json()["phrases"]] == ["p1"]
+
+    def test_phrase_tombstone_kills_serverside(self, client):
+        headers = sign_in(client)
+        client.post("/sync", json={"trials": [], "ranges": [], "phrases": [
+            {"id": "p1", "createdAt": "2026-09-10T10:00:00.000Z"}
+        ]}, headers=headers)
+        body = client.post("/sync", json={"trials": [], "ranges": [], "tombstones": [
+            {"id": "sp1", "createdAt": "2026-09-11T00:00:00.000Z", "kind": "phrase", "recordId": "p1"}
+        ]}, headers=headers).json()
+        assert body["phrases"] == []
+
+    def test_old_clients_without_phrases_still_sync(self, client):
+        headers = sign_in(client)
+        response = client.post("/sync", json={"trials": [trial("t1")], "ranges": []}, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["phrases"] == []

@@ -16,6 +16,22 @@ export {
   MEASUREMENT_DRIFT_ST,
 } from "./protocol/rangePlan";
 export type { RangePlan, RangeStep, RangeVerdict } from "./protocol/rangePlan";
+export { degreeToMidi, pickTessituraTonic, realizePhrase } from "./phrase/realize";
+export type {
+  ChordEvent,
+  ChordQuality,
+  Phrase,
+  PhraseExerciseSpec,
+  PhraseNote,
+  RealizedChord,
+  RealizedNote,
+  RealizedPhrase,
+} from "./phrase/realize";
+export { extractSungNotes, scorePhrase } from "./phrase/PhraseScorer";
+export type { NoteResult, PhraseScore, SungNote } from "./phrase/PhraseScorer";
+export { phraseLibrary } from "./phrase/library";
+export { phraseProgress } from "./phrase/progression";
+export type { PhraseProgress } from "./phrase/progression";
 export { nextActions } from "./protocol/nextActions";
 export type { Lane, LaneStatus } from "./protocol/nextActions";
 export type { TestPlan, TestStep, TestProgress } from "./protocol/testPlan";

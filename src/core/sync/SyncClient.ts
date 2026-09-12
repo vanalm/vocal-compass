@@ -1,5 +1,5 @@
 import type { TrialRepository } from "../storage/TrialRepository";
-import type { ExerciseSession, RangeMeasurement, Tombstone, TrialRecord } from "../types";
+import type { ExerciseSession, PhraseRecord, RangeMeasurement, Tombstone, TrialRecord } from "../types";
 
 export interface KeyValueStore {
   get(key: string): string | null;
@@ -62,11 +62,12 @@ export class SyncClient {
     const trials = await repo.all();
     const ranges = await repo.ranges();
     const sessions = await repo.sessions();
+    const phrases = await repo.phrases();
     const tombstones = await repo.tombstones();
     const response = await this.fetchFn(`${this.baseUrl}/sync`, {
       method: "POST",
       headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ trials, ranges, sessions, tombstones }),
+      body: JSON.stringify({ trials, ranges, sessions, phrases, tombstones }),
     });
     if (response.status === 401) {
       this.signOut();
@@ -78,6 +79,7 @@ export class SyncClient {
       trials: TrialRecord[];
       ranges: RangeMeasurement[];
       sessions?: ExerciseSession[];
+      phrases?: PhraseRecord[];
       tombstones?: Tombstone[];
     };
     // Deletions first, so a record the server killed cannot be re-imported.
@@ -102,7 +104,13 @@ export class SyncClient {
       await repo.saveSession(x);
       pulled += 1;
     }
-    return { pushed: trials.length + ranges.length + sessions.length, pulled };
+    const localPhraseIds = new Set(phrases.map((r) => r.id));
+    for (const ph of body.phrases ?? []) {
+      if (localPhraseIds.has(ph.id) || dead.has(`phrase:${ph.id}`)) continue;
+      await repo.savePhrase(ph);
+      pulled += 1;
+    }
+    return { pushed: trials.length + ranges.length + sessions.length + phrases.length, pulled };
   }
 
   private async post(path: string, payload: unknown): Promise<Record<string, unknown>> {

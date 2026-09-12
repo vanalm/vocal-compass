@@ -109,6 +109,21 @@ describe("SyncClient", () => {
     expect((await repo.sessions()).map((s) => s.id)).toEqual(["sx", "sy"]);
   });
 
+  it("pushes local phrase records and imports server-only ones", async () => {
+    await signIn();
+    const ph = (id: string) =>
+      ({ id, createdAt: "2026-09-10T10:00:00.000Z", phraseId: "l1-arc-13531", sequenceAccuracy: 0.8 }) as never;
+    await repo.savePhrase(ph("pa"));
+    fetchFn.mockResolvedValueOnce(
+      jsonResponse(200, { trials: [], ranges: [], sessions: [], phrases: [ph("pa"), ph("pb")] }),
+    );
+    const result = await client.sync(repo);
+    const [, init] = fetchFn.mock.calls[2];
+    expect(JSON.parse(init.body).phrases.map((r: { id: string }) => r.id)).toEqual(["pa"]);
+    expect(result).toEqual({ pushed: 1, pulled: 1 });
+    expect((await repo.phrases()).map((r) => r.id)).toEqual(["pa", "pb"]);
+  });
+
   it("second sync does not duplicate already-pulled records", async () => {
     await signIn();
     const payload = { trials: [trial("server-1")], ranges: [] };

@@ -7,9 +7,10 @@ import { ProgressScreen } from "./screens/ProgressScreen";
 import { TestScreen } from "./screens/TestScreen";
 import { ProtocolScreen } from "./screens/ProtocolScreen";
 import { RangeScreen } from "./screens/RangeScreen";
+import { QuestScreen } from "./screens/QuestScreen";
 import type { Lane } from "../core";
 
-type Screen = "today" | "test" | "lab" | "range" | "progress" | "protocol";
+type Screen = "today" | "test" | "quest" | "lab" | "range" | "progress" | "protocol";
 
 function Shell() {
   const [screen, setScreen] = useState<Screen>("today");
@@ -18,9 +19,11 @@ function Shell() {
     trials,
     ranges,
     sessions,
+    phrases,
     save,
     saveRange,
     saveSession,
+    savePhrase,
     deleteTrial,
     clear,
     exportJson,
@@ -51,9 +54,10 @@ function Shell() {
         </header>
 
         {screen === "today" && (
-          <TodayScreen trials={trials} ranges={ranges} sessions={sessions} onGo={goToLane} />
+          <TodayScreen trials={trials} ranges={ranges} sessions={sessions} phraseRecords={phrases} onGo={goToLane} />
         )}
         {screen === "test" && <TestScreen save={save} onFinished={() => setScreen("progress")} />}
+        {screen === "quest" && <QuestScreen phrases={phrases} ranges={ranges} onSave={savePhrase} />}
         {screen === "lab" && (
           <LabScreen save={save} />
         )}
@@ -62,6 +66,7 @@ function Shell() {
             trials={trials}
             ranges={ranges}
             sessions={sessions}
+            phraseRecords={phrases}
             onGo={goToLane}
             onDeleteTrial={deleteTrial}
             onSynced={refresh}
@@ -76,7 +81,7 @@ function Shell() {
       </div>
 
       <nav className="vc-nav" aria-label="Primary">
-        {(["today", "test", "lab", "range", "progress", "protocol"] as Screen[]).map((s) => (
+        {(["today", "test", "quest", "lab", "range", "progress", "protocol"] as Screen[]).map((s) => (
           <button key={s} aria-current={screen === s ? "page" : undefined} onClick={() => setScreen(s)}>
             {s[0].toUpperCase() + s.slice(1)}
           </button>

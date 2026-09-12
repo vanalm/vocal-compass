@@ -1,8 +1,9 @@
-import type { ExerciseSession, RangeMeasurement, Tombstone, TrialRecord } from "../types";
+import type { ExerciseSession, PhraseRecord, RangeMeasurement, Tombstone, TrialRecord } from "../types";
 import { buildExportJson, importInto, type TrialRepository } from "./TrialRepository";
 
 const DB_NAME = "vocal-compass";
-const DB_VERSION = 4; // v2 ranges; v3 sessions; v4 tombstones
+const DB_VERSION = 5; // v2 ranges; v3 sessions; v4 tombstones; v5 phrases
+const PHRASES = "phrases";
 const TOMBSTONES = "tombstones";
 const SESSIONS = "sessions";
 const TRIALS = "trials";
@@ -35,6 +36,10 @@ export class IndexedDbTrialRepository implements TrialRepository {
           }
           if (!db.objectStoreNames.contains(TOMBSTONES)) {
             const store = db.createObjectStore(TOMBSTONES, { keyPath: "id" });
+            store.createIndex("createdAt", "createdAt");
+          }
+          if (!db.objectStoreNames.contains(PHRASES)) {
+            const store = db.createObjectStore(PHRASES, { keyPath: "id" });
             store.createIndex("createdAt", "createdAt");
           }
         };
@@ -86,6 +91,15 @@ export class IndexedDbTrialRepository implements TrialRepository {
     return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  async savePhrase(record: PhraseRecord): Promise<void> {
+    await this.tx(PHRASES, "readwrite", (store) => store.put(record));
+  }
+
+  async phrases(): Promise<PhraseRecord[]> {
+    const rows = await this.tx<PhraseRecord[]>(PHRASES, "readonly", (store) => store.getAll());
+    return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
   async deleteTrial(id: string): Promise<void> {
     await this.applyTombstone({
       id: crypto.randomUUID(),
@@ -101,7 +115,13 @@ export class IndexedDbTrialRepository implements TrialRepository {
       await this.tx(TOMBSTONES, "readwrite", (store) => store.put(stone));
     }
     const storeName =
-      stone.kind === "trial" ? TRIALS : stone.kind === "range" ? RANGES : SESSIONS;
+      stone.kind === "trial"
+        ? TRIALS
+        : stone.kind === "range"
+          ? RANGES
+          : stone.kind === "phrase"
+            ? PHRASES
+            : SESSIONS;
     await this.tx(storeName, "readwrite", (store) => store.delete(stone.recordId));
   }
 
@@ -114,6 +134,7 @@ export class IndexedDbTrialRepository implements TrialRepository {
     await this.tx(TRIALS, "readwrite", (store) => store.clear());
     await this.tx(RANGES, "readwrite", (store) => store.clear());
     await this.tx(SESSIONS, "readwrite", (store) => store.clear());
+    await this.tx(PHRASES, "readwrite", (store) => store.clear());
     await this.tx(TOMBSTONES, "readwrite", (store) => store.clear());
   }
 
@@ -122,6 +143,7 @@ export class IndexedDbTrialRepository implements TrialRepository {
       await this.all(),
       await this.ranges(),
       await this.sessions(),
+      await this.phrases(),
       await this.tombstones(),
     );
   }

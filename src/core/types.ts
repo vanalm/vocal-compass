@@ -104,7 +104,34 @@ export interface ExerciseSession {
   stepsCompleted: number;
 }
 
-export type SyncRecordKind = "trial" | "range" | "session";
+export type SyncRecordKind = "trial" | "range" | "session" | "phrase";
+
+/** Which line the singer is assigned in a phrase exercise. */
+export type SingerRole = "melody" | "root" | "third" | "fifth";
+/** How much the guide audio helps: whole phrase, first+last note, or nothing. */
+export type GuideStrength = "full" | "anchor" | "none";
+
+/** One scored phrase attempt (Echo Quest and every future phrase game). */
+export interface PhraseRecord {
+  id: string;
+  createdAt: string;
+  phraseId: string;
+  phraseName: string;
+  level: number;
+  keyTonicMidi: number;
+  bpm: number;
+  role: SingerRole;
+  guide: GuideStrength;
+  /** True only for guide-free first takes — the cold, honest score. */
+  verified: boolean;
+  hits: number;
+  misses: number;
+  extras: number;
+  sequenceAccuracy: number;
+  meanAbsOnsetMs: number | null;
+  landingHit: boolean;
+  trace: Array<{ t: number; midi: number; clarity: number; rms?: number }>;
+}
 
 /**
  * A deletion that must outlive the record: sync is a union merge of

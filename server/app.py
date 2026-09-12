@@ -75,6 +75,7 @@ class SyncBody(BaseModel):
     ranges: list[dict]
     # Absent from older clients; defaulting keeps them syncing.
     sessions: list[dict] = []
+    phrases: list[dict] = []
     tombstones: list[dict] = []
 
 
@@ -191,7 +192,7 @@ def create_app(
             stone_id = str(payload.get("id", ""))
             target_kind = str(payload.get("kind", ""))
             target_id = str(payload.get("recordId", ""))
-            if not stone_id or target_kind not in ("trial", "range", "session") or not target_id:
+            if not stone_id or target_kind not in ("trial", "range", "session", "phrase") or not target_id:
                 continue
             if not session.get(StoredRecord, (user.id, "tombstone", stone_id)):
                 session.add(
@@ -220,6 +221,7 @@ def create_app(
             ("trial", body.trials),
             ("range", body.ranges),
             ("session", body.sessions),
+            ("phrase", body.phrases),
         ):
             for payload in records:
                 record_id = str(payload.get("id", ""))
@@ -250,6 +252,7 @@ def create_app(
             "trials": all_of("trial"),
             "ranges": all_of("range"),
             "sessions": all_of("session"),
+            "phrases": all_of("phrase"),
             "tombstones": all_of("tombstone"),
         }
 
