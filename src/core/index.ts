@@ -72,6 +72,7 @@ export {
   lowCutOption,
   lowNoteFilterAdvice,
   noiseFilterAdvice,
+  strongerLowCut,
 } from "./pitch/micFilter";
 export type { FilterAdvice, LowCutNodeConfig, LowCutOption } from "./pitch/micFilter";
 export type { HeldExtremes, RangeAnalyzerOptions } from "./pitch/RangeAnalyzer";

@@ -15,6 +15,7 @@ import { PitchReadout } from "../components/PitchReadout";
 import { CueIndicator, FlowModeToggle, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
 import { TraceChart } from "../components/TraceChart";
 import { ExerciseInfoModal, InfoButton } from "../components/ExerciseInfo";
+import { NoiseWarning } from "../components/NoiseWarning";
 
 const DELAYS = [0, 2000, 5000, 8000];
 const INTENTS: Array<{ id: IntentLabel; label: string }> = [
@@ -223,11 +224,7 @@ export function LabScreen({
             <h3>Sing</h3>
             <p>Commit to one note. Capture stops automatically.</p>
             <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
-            {runner.tooNoisy && (
-              <p className="vc-small vc-noise-warning">
-                Too noisy here — quiet singing may go unscored. Move somewhere quieter or use a closer mic.
-              </p>
-            )}
+            <NoiseWarning noisy={runner.tooNoisy} />
             {showLive && <PitchReadout sample={runner.liveSample} targetMidi={trial.targetMidi} />}
             <div className="vc-actions vc-center-actions">
               <button className="vc-button" onClick={runner.finish}>Done</button>

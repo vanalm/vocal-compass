@@ -115,10 +115,14 @@ export function lowNoteFilterAdvice(steps: RangeStepResult[], setting: LowCutSet
   };
 }
 
+/** The next setting that cuts more rumble, or null when already at the strongest. */
+export function strongerLowCut(setting: LowCutSetting): LowCutSetting | null {
+  return setting === "off" || setting === "60" ? "80" : setting === "80" ? "100" : null;
+}
+
 export function noiseFilterAdvice(noisyShare: number, setting: LowCutSetting): FilterAdvice | null {
   if (noisyShare < NOISY_SHARE_FOR_ADVICE) return null;
-  const suggest: LowCutSetting | null =
-    setting === "off" || setting === "60" ? "80" : setting === "80" ? "100" : null;
+  const suggest = strongerLowCut(setting);
   if (suggest === null) return null;
   return {
     kind: "raise",

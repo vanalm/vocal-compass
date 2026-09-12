@@ -14,6 +14,7 @@ import {
   type TrialRecord,
 } from "../../core";
 import { useServices } from "../services";
+import { loadFlowMode, saveFlowMode, type FlowMode } from "./flowMode";
 
 export interface RunnerSettings {
   exerciseId: string;
@@ -24,9 +25,6 @@ export interface RunnerSettings {
 
 export type RunnerPhase = "idle" | "listen" | "imagine" | "sing" | "review";
 
-/** click = explicit gates between phases; auto = flows once it's go time. */
-export type FlowMode = "click" | "auto";
-
 export interface RunnerOptions {
   /** Pin the pacing instead of using the saved preference. The guided test
    * runs hands-free so the only click between trials is Next or Retry. */
@@ -36,16 +34,7 @@ export interface RunnerOptions {
 const SING_WINDOW_MS = 4000;
 /** Auto mode: breath-length beat between "cue done" and capture start. */
 const AUTO_BEAT_MS = 900;
-const FLOW_MODE_KEY = "vc-flow-mode";
 const HOME_CHORD_LABEL = "Home chord · sets the key";
-
-function loadFlowMode(): FlowMode {
-  try {
-    return window.localStorage.getItem(FLOW_MODE_KEY) === "auto" ? "auto" : "click";
-  } catch {
-    return "click";
-  }
-}
 
 /**
  * Orchestrates one trial at a time: cue playback, the silent delay,
@@ -158,11 +147,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
   const setFlowMode = useCallback((mode: FlowMode) => {
     flowModeRef.current = mode;
     setFlowModeState(mode);
-    try {
-      window.localStorage.setItem(FLOW_MODE_KEY, mode);
-    } catch {
-      /* private mode: preference just doesn't persist */
-    }
+    saveFlowMode(mode);
   }, []);
 
   /** Replay the whole cue from the decision point, as often as needed. */

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { noteName, type PitchSample } from "../../core";
-import type { FlowMode } from "../hooks/useTrialRunner";
+import type { FlowMode } from "../hooks/flowMode";
 
 /**
  * Spacebar fires the current primary action — one key advances the whole

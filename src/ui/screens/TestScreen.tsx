@@ -10,6 +10,7 @@ import { useTrialRunner } from "../hooks/useTrialRunner";
 import { CueIndicator, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
 import { TraceChart } from "../components/TraceChart";
 import { ExerciseInfoModal, GuideBrief, InfoButton } from "../components/ExerciseInfo";
+import { NoiseWarning } from "../components/NoiseWarning";
 
 const INTERRUPTED =
   "That trial was stopped and won't count. It starts over from the top when you close this.";
@@ -182,9 +183,7 @@ export function TestScreen({
               {runner.micError}
             </p>
           )}
-          {runner.tooNoisy && (
-            <p className="vc-small vc-noise-warning">Too noisy here — quiet singing may go unscored.</p>
-          )}
+          <NoiseWarning noisy={runner.tooNoisy} />
 
           {!started && runner.phase === "idle" && (
             <div className="vc-intro">

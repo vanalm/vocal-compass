@@ -7,6 +7,7 @@ import {
   lowCutNodeConfig,
   lowNoteFilterAdvice,
   noiseFilterAdvice,
+  strongerLowCut,
 } from "../src/core/pitch/micFilter";
 import type { RangeStepResult } from "../src/core/types";
 
@@ -130,5 +131,14 @@ describe("noiseFilterAdvice — when rumble swamped the singer's turns", () => {
 
   it("says a low-cut only helps with rumble", () => {
     expect(noiseFilterAdvice(0.5, "60")!.message).toMatch(/rumble/i);
+  });
+});
+
+describe("strongerLowCut — the one-step fix a too-noisy trial offers", () => {
+  it("goes from off or standard to noisy, then very noisy, then stops", () => {
+    expect(strongerLowCut("off")).toBe("80");
+    expect(strongerLowCut("60")).toBe("80");
+    expect(strongerLowCut("80")).toBe("100");
+    expect(strongerLowCut("100")).toBeNull();
   });
 });
