@@ -17,26 +17,28 @@ docker compose up --build      # the production image + Postgres on http://local
 
 ## State right now (2026-09-12)
 
-- The production stack is committed on `main`; nothing is pushed, and
-  **`vanalm/vocal-compass` is a public repo**, so pushing publishes all of it.
+- The production stack is on `main` of the public `vanalm/vocal-compass`
+  repository; commits use the GitHub noreply address.
 - Green at the last run: web unit tests, the API suite on SQLite and on
   Postgres 16, `mypy --strict`, Terraform `validate` + `test` in every root,
   actionlint, and an image build with a compose smoke test (sign-in and a
   two-device sync round trip).
-- **Nothing exists in Google Cloud yet.** `terraform/README.md` is the runbook.
+- **Google Cloud:** project `vocal-compass` exists with billing linked. The
+  Terraform bootstrap is planned but not applied; `terraform/README.md` is the
+  runbook.
 
 ## To go live, in order
 
 1. **WorkOS:** in your WorkOS account, add a Vocal Compass project with
    staging and production environments, set each redirect and sign-out URL,
    and put the client IDs into `terraform/envs/*/*.auto.tfvars`.
-2. **Project:** `gcloud projects create vocal-compass` and link billing. If the
-   id is taken, choose a suffix and replace it in the three `*.auto.tfvars`.
-3. **Values:** `domain` in `envs/prod/prod.auto.tfvars`; `alert_email` in each
-   env's gitignored `terraform.tfvars` (never committed — the repo is public).
-4. **Apply** per `terraform/README.md`: bootstrap → WorkOS API keys into Secret
-   Manager → first image → staging, then prod → Cloudflare DNS-only A record →
-   GitHub Environment `production` with reviewers, then the repo variables.
+2. **Values:** `domain` in `envs/prod/prod.auto.tfvars` (`""` serves prod on
+   its `run.app` URL until a domain is chosen); `alert_email` in each env's
+   gitignored `terraform.tfvars` (never committed — the repo is public).
+3. **Apply** per `terraform/README.md`: bootstrap → WorkOS API keys into Secret
+   Manager → first image → staging, then prod → with a domain, a Cloudflare
+   DNS-only A record → GitHub Environment `production` with reviewers, then the
+   repo variables.
 
 ## Open items, in priority order
 
