@@ -52,7 +52,7 @@ export function RangeScreen({
 
   return (
     <div className="vc-grid">
-      <section className="vc-card" style={{ gridColumn: "span 12" }}>
+      <section className="vc-card vc-card-pad" style={{ gridColumn: "span 12" }}>
         <div className="vc-section-title">
           <h3>Measure</h3>
         </div>
@@ -78,7 +78,7 @@ export function RangeScreen({
         <RangeProbe ranges={ranges} onSave={onSaveRange} />
       </section>
 
-      <section className="vc-card" style={{ gridColumn: "span 12" }}>
+      <section className="vc-card vc-card-pad" style={{ gridColumn: "span 12" }}>
         <div className="vc-section-title">
           <h3>{plan.title}</h3>
           <span className="vc-small">

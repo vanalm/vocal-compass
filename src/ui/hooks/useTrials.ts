@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ExerciseSession, PhraseRecord, RangeMeasurement, TrialRecord } from "../../core";
+import { saveJsonFile } from "../download";
 import { useServices } from "../services";
 
-/** Loads all persisted trials + range measurements and exposes save/clear/export. */
-export function useTrials() {
+/**
+ * Loads all persisted trials + range measurements and exposes save/export.
+ * `onChange` hears about every local write, which is how sync learns there is something to send.
+ * Clearing is the account's (`clearLocalData`), since it must not race a sync.
+ */
+export function useTrials(onChange: () => void) {
   const { repository } = useServices();
   const [trials, setTrials] = useState<TrialRecord[]>([]);
   const [ranges, setRanges] = useState<RangeMeasurement[]>([]);
@@ -23,61 +28,54 @@ export function useTrials() {
     void refresh();
   }, [refresh]);
 
+  const written = useCallback(async () => {
+    onChange();
+    await refresh();
+  }, [onChange, refresh]);
+
   const save = useCallback(
     async (record: TrialRecord) => {
       await repository.save(record);
-      await refresh();
+      await written();
     },
-    [repository, refresh],
+    [repository, written],
   );
 
   const saveRange = useCallback(
     async (measurement: RangeMeasurement) => {
       await repository.saveRange(measurement);
-      await refresh();
+      await written();
     },
-    [repository, refresh],
+    [repository, written],
   );
 
   const saveSession = useCallback(
     async (session: ExerciseSession) => {
       await repository.saveSession(session);
-      await refresh();
+      await written();
     },
-    [repository, refresh],
+    [repository, written],
   );
 
   const savePhrase = useCallback(
     async (record: PhraseRecord) => {
       await repository.savePhrase(record);
-      await refresh();
+      await written();
     },
-    [repository, refresh],
+    [repository, written],
   );
 
   const deleteTrial = useCallback(
     async (id: string) => {
       await repository.deleteTrial(id);
-      await refresh();
+      await written();
     },
-    [repository, refresh],
+    [repository, written],
   );
 
-  const clear = useCallback(async () => {
-    await repository.clear();
-    await refresh();
-  }, [repository, refresh]);
-
   const exportJson = useCallback(async () => {
-    const json = await repository.exportJson();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `vocal-compass-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    saveJsonFile(await repository.exportJson(), "vocal-compass");
   }, [repository]);
 
-  return { trials, ranges, sessions, phrases, loaded, save, saveRange, saveSession, savePhrase, deleteTrial, clear, exportJson, refresh };
+  return { trials, ranges, sessions, phrases, loaded, save, saveRange, saveSession, savePhrase, deleteTrial, exportJson, refresh };
 }

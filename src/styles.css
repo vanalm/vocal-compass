@@ -28,7 +28,7 @@ button { cursor: pointer; }
 .vc-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; }
 .vc-card { border: 1px solid #20332c; border-radius: 18px; background: rgba(15, 27, 23, .88); box-shadow: 0 18px 50px rgba(0,0,0,.16); }
 .vc-card-pad { padding: 18px; }
-.vc-hero { grid-column: span 8; padding: 28px; min-height: 300px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; position: relative; }
+.vc-hero { grid-column: span 12; padding: 28px; min-height: 300px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; position: relative; }
 .vc-hero:after { content: ""; position: absolute; width: 320px; height: 320px; border: 1px solid rgba(83,214,158,.17); border-radius: 50%; right: -90px; top: -70px; box-shadow: 0 0 0 46px rgba(83,214,158,.035), 0 0 0 92px rgba(83,214,158,.02); pointer-events: none; }
 .vc-hero-content { position: relative; z-index: 1; max-width: 650px; }
 .vc-eyebrow { display: inline-flex; gap: 8px; align-items: center; color: #8ce8bd; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .11em; }
@@ -44,7 +44,7 @@ button { cursor: pointer; }
 .vc-button.danger { background: #2a181a; border-color: #61323a; color: #ffbdc5; }
 .vc-button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 .vc-side { grid-column: span 4; padding: 18px; }
-.vc-section-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+.vc-section-title { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
 .vc-section-title h3 { margin: 0; font-size: 15px; letter-spacing: -.015em; }
 .vc-section-title p { margin: 0; color: #779087; font-size: 12px; }
 .vc-kpis { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
@@ -67,17 +67,17 @@ button { cursor: pointer; }
 .vc-field select, .vc-field input[type="range"] { width: 100%; }
 .vc-field select { border: 1px solid #2b4139; color: #e9f5ef; background: #101b18; border-radius: 10px; padding: 10px; }
 .vc-segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; background: #0c1613; border: 1px solid #20322c; border-radius: 12px; }
-.vc-segmented button { border: 0; border-radius: 9px; background: transparent; color: #789087; padding: 9px 6px; font-size: 11px; font-weight: 800; }
+.vc-segmented button { border: 0; border-radius: 9px; background: transparent; color: #789087; padding: 9px 6px; font-size: 11px; font-weight: 800; text-transform: capitalize; }
 .vc-segmented button.active { background: #1e342b; color: #e9fff5; }
 .vc-exercise-list { display: grid; gap: 7px; }
 .vc-exercise-choice { text-align: left; padding: 11px; border: 1px solid #22362f; background: #0f1a17; color: #d9e8e1; border-radius: 12px; }
 .vc-exercise-choice.active { border-color: #53d69e; background: #14271f; }
 .vc-exercise-choice strong { display: block; font-size: 12px; }
-.vc-exercise-choice span { display: block; margin-top: 4px; color: #748b82; font-size: 10px; line-height: 1.3; }
+.vc-exercise-choice span { display: block; margin-top: 4px; color: #8fa69e; font-size: 11px; line-height: 1.3; }
 .vc-stage { min-height: 590px; padding: 20px; position: relative; overflow: hidden; }
-.vc-stage-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.vc-stage-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .vc-phase { color: #7f978e; font-size: 11px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
-.vc-mic { display: inline-flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid #2b4038; border-radius: 999px; font-size: 11px; color: #93a89f; }
+.vc-mic { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; padding: 7px 9px; border: 1px solid #2b4038; border-radius: 999px; font-size: 11px; color: #93a89f; }
 .vc-mic.live { color: #9af0c5; border-color: #376952; background: #11281e; }
 .vc-map { margin: 34px auto 20px; max-width: 660px; }
 .vc-map-meta { display: flex; justify-content: space-between; gap: 12px; color: #758a82; font-size: 12px; }
@@ -90,6 +90,11 @@ button { cursor: pointer; }
 .vc-prompt { text-align: center; max-width: 560px; margin: 0 auto; }
 .vc-prompt h3 { margin: 0 0 8px; font-size: 23px; letter-spacing: -.025em; }
 .vc-prompt p { color: #91a59d; line-height: 1.5; margin: 0; }
+/* Where each Lab phase sits in the stage; phones drop the offsets, since the stage has no fixed height there */
+.vc-stage-prompt { margin-top: 90px; }
+.vc-stage-prompt.listen { margin-top: 110px; }
+.vc-stage-prompt.imagine { margin-top: 60px; }
+.vc-stage-prompt.sing { margin-top: 40px; }
 .vc-center-actions { justify-content: center; }
 .vc-live-readout { margin: 18px auto 0; max-width: 460px; border: 1px solid #28483b; background: #0d1b16; border-radius: 16px; padding: 14px; text-align: center; }
 .vc-live-readout strong { font-size: 32px; }
@@ -117,7 +122,7 @@ button { cursor: pointer; }
 .vc-help p { margin: 6px 0 0; color: #82988f; font-size: 11px; line-height: 1.45; }
 .vc-help.active { border-color: #6e5132; background: #211a13; }
 .vc-chart-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
-.vc-chart-card { padding: 18px; min-height: 285px; }
+.vc-chart-card { padding: 18px; min-height: 285px; min-width: 0; }
 .vc-chart-card.wide { grid-column: span 2; }
 .vc-chart-title { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
 .vc-chart-title h3 { margin: 0; font-size: 15px; }
@@ -128,6 +133,8 @@ button { cursor: pointer; }
 .vc-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
 .vc-table th, .vc-table td { border-bottom: 1px solid #20322c; text-align: left; padding: 10px 8px; }
 .vc-table th { color: #738981; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+/* A table wider than its card scrolls inside it, never the page */
+.vc-table-wrap { overflow-x: auto; }
 .vc-protocol { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 14px; align-items: start; }
 .vc-protocol-main { display: grid; gap: 14px; }
 .vc-prose { padding: 22px; }
@@ -145,14 +152,16 @@ button { cursor: pointer; }
 .vc-test.pass { border-color: #315b48; color: #a2e7c4; }
 .vc-test.fail { border-color: #653841; color: #ffc0c8; }
 .vc-range { display: flex; align-items: center; gap: 10px; }
-.vc-range input { flex: 1; }
+.vc-range input { flex: 1; min-height: 28px; }
 .vc-range output { min-width: 32px; color: #cce0d6; font-weight: 800; }
 .vc-small { color: #748b82; font-size: 11px; line-height: 1.45; }
 .vc-divider { height: 1px; background: #20322c; margin: 16px 0; }
 .vc-toast { position: fixed; z-index: 30; right: 18px; top: 18px; background: #173326; color: #cffff0; border: 1px solid #3f755b; border-radius: 12px; padding: 11px 13px; box-shadow: 0 16px 40px rgba(0,0,0,.35); font-size: 12px; font-weight: 800; }
 @media (max-width: 980px) {
   .vc-lab-layout { grid-template-columns: 1fr; }
-  .vc-stage { order: -1; min-height: 530px; }
+  .vc-stage { min-height: 530px; }
+  /* Lab's runner leads once its columns stack; Test and Quest keep their order */
+  .vc-lab-layout > .vc-stage { order: -1; }
   .vc-protocol { grid-template-columns: 1fr; }
   .vc-sticky { position: static; }
   .vc-module-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -165,11 +174,13 @@ button { cursor: pointer; }
   .vc-hero h2 { font-size: 43px; }
   .vc-module-grid { grid-template-columns: 1fr; }
   .vc-banner { align-items: flex-start; flex-direction: column; }
-  .vc-chart-grid { grid-template-columns: 1fr; }
+  .vc-chart-grid { grid-template-columns: minmax(0, 1fr); }
   .vc-chart-card.wide { grid-column: auto; }
-  .vc-nav { width: calc(100% - 24px); justify-content: space-between; bottom: 10px; }
-  .vc-nav button { flex: 1; padding: 10px 6px; }
-  .vc-stage { padding: 14px; min-height: 620px; }
+  .vc-nav { width: calc(100% - 24px); justify-content: space-between; bottom: 10px; gap: 2px; padding: 5px; }
+  .vc-nav button { flex: 1 1 auto; padding: 10px 4px; }
+  .vc-stage { padding: 14px; min-height: 0; }
+  .vc-stage > .vc-stage-prompt { margin-top: 24px; }
+  .vc-stage-head .vc-flowmode { order: 3; }
   .vc-note-route { gap: 8px; }
   .vc-note-orb { min-height: 126px; border-radius: 22px; padding: 12px; }
   .vc-note-orb strong { font-size: 36px; }
@@ -186,8 +197,6 @@ button { cursor: pointer; }
 .vc-heatmap-cell { display: grid; gap: 4px; justify-items: center; font-size: 10px; color: #748b82; }
 .vc-heatmap-swatch { width: 34px; height: 22px; border-radius: 6px; background: transparent; border: 1px dashed #29443a; }
 .vc-heatmap-cell [style] { border: 0; }
-.vc-account { margin-top: 14px; border-top: 1px solid #1d332a; padding-top: 12px; display: grid; gap: 8px; }
-.vc-account-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .vc-input { background: #10201a; border: 1px solid #29443a; border-radius: 10px; padding: 10px 12px; color: #eaf8f1; font-size: 13px; min-width: 200px; }
 .vc-moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
 .vc-move { border: 1px solid #1d332a; border-radius: 12px; padding: 10px 12px; display: grid; gap: 3px; }
@@ -216,11 +225,11 @@ button { cursor: pointer; }
 .vc-vfe-step .vc-test-what, .vc-vfe-step .vc-test-why { margin: 0; max-width: none; text-align: left; }
 .vc-vfe-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .vc-vfe-step .vc-button { justify-self: start; }
-.vc-evidence { font-size: 11px; color: #5b7d70; margin: 0; }
+.vc-evidence { font-size: 11px; color: #8fa69e; margin: 0; }
 .vc-verdict-good { color: #53d69e; }
 .vc-verdict-bad { color: #ffbdc5; }
 .vc-verdict-flat { color: #748b82; }
-.vc-row-delete { border: 0; background: transparent; color: #5b7d70; font-size: 13px; padding: 2px 8px; border-radius: 8px; cursor: pointer; }
+.vc-row-delete { min-width: 32px; min-height: 32px; border: 0; background: transparent; color: #8fa69e; font-size: 13px; padding: 2px 8px; border-radius: 8px; cursor: pointer; }
 .vc-row-delete:hover { color: #ffbdc5; background: #241318; }
 .vc-cue-indicator { display: flex; align-items: center; gap: 10px; justify-content: center; color: #8ce8bd; font-weight: 700; }
 .vc-cue-dot { display: inline-block; animation: vc-pulse 0.9s ease-in-out infinite; font-size: 20px; }
@@ -235,9 +244,9 @@ button { cursor: pointer; }
 .vc-howto-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
 .vc-howto-steps strong { color: #8ce8bd; font-size: 13px; }
 .vc-howto-steps p { color: #748b82; font-size: 12px; line-height: 1.5; margin: 6px 0 0; }
-.vc-heatmap-residual { font-size: 9px; color: #5b7d70; }
+.vc-heatmap-residual { font-size: 9px; color: #8fa69e; }
 .vc-flowmode { display: inline-flex; }
-.vc-flowmode button { padding: 5px 12px; font-size: 11px; }
+.vc-flowmode button { padding: 7px 12px; min-height: 30px; font-size: 11px; }
 .vc-quest-level { margin-top: 14px; }
 .vc-quest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 8px; }
 .vc-quest-card { border: 1px solid #29443a; background: #10201a; border-radius: 12px; padding: 12px; display: grid; gap: 5px; text-align: left; color: #eaf8f1; cursor: pointer; }
@@ -264,7 +273,8 @@ button { cursor: pointer; }
 /* Exercise guides: the ⓘ, the test's task bar, the brief, and the modal with its playable example */
 .vc-info { width: 24px; height: 24px; flex: none; display: inline-grid; place-items: center; padding: 0; border-radius: 999px; border: 1px solid #3f6857; background: #10201a; color: #8ce8bd; font: italic 800 13px/1 Georgia, "Times New Roman", serif; }
 .vc-info:hover { background: #1d332a; border-color: #53d69e; }
-.vc-info:focus-visible, .vc-modal-close:focus-visible, .vc-link:focus-visible { outline: 2px solid #53d69e; outline-offset: 2px; }
+/* One focus ring for everything a keyboard can reach; :where keeps it overridable */
+:where(button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible { outline: 2px solid #53d69e; outline-offset: 2px; }
 .vc-link { border: 0; background: none; padding: 0; color: #8ce8bd; font-weight: 700; font-size: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .vc-card-pad h3 { margin-top: 0; }
 .vc-taskbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid #20322c; }
@@ -289,9 +299,9 @@ button { cursor: pointer; }
 .vc-brief-facts div { display: grid; grid-template-columns: 96px 1fr; gap: 10px; }
 .vc-brief-facts dt { color: #8ce8bd; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; padding-top: 2px; }
 .vc-brief-facts dd { margin: 0; color: #9fb2aa; font-size: 12.5px; line-height: 1.5; }
-.vc-lab-guide { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: #d9e8e1; }
+.vc-lab-guide { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: #d9e8e1; white-space: nowrap; }
 .vc-modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(3, 8, 6, .72); backdrop-filter: blur(4px); }
-.vc-modal { width: min(760px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; padding: 22px 24px 26px; border: 1px solid #2a4338; border-radius: 20px; background: #0f1b17; box-shadow: 0 30px 90px rgba(0,0,0,.55); }
+.vc-modal { width: min(760px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 22px 24px 26px; border: 1px solid #2a4338; border-radius: 20px; background: #0f1b17; box-shadow: 0 30px 90px rgba(0,0,0,.55); }
 .vc-modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .vc-modal-head h2 { margin: 6px 0 4px; font-size: 26px; letter-spacing: -.03em; }
 .vc-modal-task { margin: 0; color: #d9e8e1; font-size: 15px; line-height: 1.45; }
@@ -380,3 +390,55 @@ button { cursor: pointer; }
 .vc-walk-advice p { margin: 0; color: #ffd6ad; font-size: 13px; line-height: 1.45; }
 .vc-walk-advice .vc-small { color: #c9b39a; }
 .vc-walk-advice .vc-actions { margin-top: 0; }
+/* Accounts: the topbar chip, the Settings card, and the delete confirmation */
+.vc-topbar-end { display: flex; align-items: center; gap: 8px; flex: none; }
+.vc-account-chip { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.vc-sync-dot { width: 7px; height: 7px; flex: none; border-radius: 999px; background: #748b82; }
+.vc-sync-dot.ok { background: #53d69e; box-shadow: 0 0 10px rgba(83,214,158,.55); }
+.vc-sync-dot.busy { background: #8ce8bd; animation: vc-pulse .9s ease-in-out infinite; }
+.vc-sync-dot.warn { background: #ffd6ad; }
+.vc-account-notice { margin: 0 0 14px; padding: 9px 12px; border: 1px solid #65472c; border-radius: 10px; background: #2b2118; color: #ffd6ad; font-size: 12.5px; line-height: 1.45; }
+.vc-account-lede { margin: 0; max-width: 640px; color: #9fb2aa; font-size: 13px; line-height: 1.55; }
+.vc-account-who { margin: 0; color: #9fb2aa; font-size: 13px; overflow-wrap: anywhere; }
+.vc-account-who strong { color: #eef6f2; font-size: 15px; }
+.vc-account-status { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; color: #9fb2aa; font-size: 13px; line-height: 1.45; }
+.vc-account-danger { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 20px; margin-top: 22px; padding-top: 16px; border-top: 1px solid #20322c; }
+.vc-account-danger h4 { margin: 0 0 3px; font-size: 13px; color: #ffbdc5; }
+.vc-account-danger p { margin: 0; }
+.vc-progress-account { margin: 14px 0 0; }
+.vc-account-done { margin: 0 0 12px; color: #8ce8bd; font-size: 13px; line-height: 1.45; }
+/* Focused by the app, not by Tab: a dialog as it opens, a heading after its content changes */
+.vc-modal:focus, h3[tabindex="-1"]:focus { outline: none; }
+.vc-modal.vc-confirm { width: min(460px, 100%); }
+.vc-confirm h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+.vc-confirm-body p { margin: 10px 0 0; color: #b5c7bf; font-size: 13.5px; line-height: 1.55; }
+.vc-confirm-body strong { color: #ffbdc5; }
+.vc-confirm > .vc-link { margin-top: 4px; padding: 8px 0; }
+.vc-confirm form { display: grid; gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid #20322c; }
+.vc-confirm label { color: #c3d4cc; font-size: 13px; }
+/* 16px text keeps phones from zooming into the field */
+.vc-confirm .vc-input { width: 100%; min-width: 0; font-size: 16px; }
+.vc-confirm .vc-actions { justify-content: flex-end; margin-top: 8px; }
+.vc-confirm > .vc-actions { margin-top: 20px; }
+.vc-sr-only, .vc-settings-icon { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .vc-sync-dot.busy { animation: none; }
+}
+@media (max-width: 760px) {
+  /* The brand's parts become grid cells: name and account controls share the first row, the tagline takes the second. */
+  .vc-topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; margin-bottom: 18px; }
+  .vc-brand, .vc-brand > div:not(.vc-mark) { display: contents; }
+  .vc-brand h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vc-brand p { grid-row: 2; grid-column: 1 / -1; margin: 0; }
+  .vc-topbar-end { grid-row: 1; grid-column: 3; gap: 6px; }
+  .vc-topbar-end .vc-settings-link { padding: 7px 11px; }
+  .vc-sync-detail { display: none; }
+  /* Settings becomes a gear, so the sync status and the app's name both fit on one row */
+  .vc-settings-icon { position: static; width: auto; height: auto; overflow: visible; clip-path: none; font-size: 15px; line-height: 1; }
+  .vc-settings-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .vc-account-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .vc-account-actions > :nth-child(2) { grid-column: 1 / -1; order: 1; }
+}
+@media (max-width: 370px) {
+  .vc-nav button { padding: 10px 2px; font-size: 11px; }
+}

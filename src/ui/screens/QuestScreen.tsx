@@ -10,7 +10,7 @@ import {
   type RangeMeasurement,
   type SingerRole,
 } from "../../core";
-import { usePhraseRunner } from "../hooks/usePhraseRunner";
+import { usePhraseRunner, type PhrasePhase } from "../hooks/usePhraseRunner";
 import { CueIndicator, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
 
 const GUIDE_COPY: Record<GuideStrength, string> = {
@@ -20,6 +20,16 @@ const GUIDE_COPY: Record<GuideStrength, string> = {
 };
 
 const DEFAULT_BPM = 90;
+
+/** Each phase as the stage names it. */
+const PHASE_LABELS: Record<PhrasePhase, string> = {
+  idle: "Ready",
+  listen: "Listen",
+  ready: "Ready",
+  countin: "Count-in",
+  sing: "Sing",
+  review: "Review",
+};
 
 /**
  * Echo Quest: copy phrases as the guide fades. One reusable format powers
@@ -61,7 +71,7 @@ export function QuestScreen({
     const levels = [...new Set(library.map((p) => p.level))].sort();
     return (
       <div className="vc-grid">
-        <section className="vc-card" style={{ gridColumn: "span 12" }}>
+        <section className="vc-card vc-card-pad" style={{ gridColumn: "span 12" }}>
           <div className="vc-section-title">
             <h3>Echo Quest</h3>
             <span className="vc-small">copy the phrase · guide fades as you pass · spacebar advances</span>
@@ -126,7 +136,7 @@ export function QuestScreen({
     <div className="vc-grid">
       <section className="vc-card vc-stage" style={{ gridColumn: "span 12" }}>
         <div className="vc-stage-head">
-          <span className="vc-phase">{runner.phase}</span>
+          <span className="vc-phase">{PHASE_LABELS[runner.phase]}</span>
           <span className="vc-small">
             {spec.phrase.name} · key of {noteName(spec.keyTonicMidi)} · {GUIDE_COPY[spec.guide]}
           </span>

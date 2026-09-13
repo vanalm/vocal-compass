@@ -1,4 +1,5 @@
 import {
+  localDateKey,
   nextActions,
   practiceDays,
   type ExerciseSession,
@@ -34,15 +35,13 @@ export function TodayScreen({
   const lanes = nextActions(new Date(), trials, ranges, sessions);
 
   const today = new Date();
-  const dayKey = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const days = practiceDays([
     ...trials.map((t) => t.createdAt),
     ...ranges.map((r) => r.createdAt),
     ...sessions.map((s) => s.createdAt),
     ...phraseRecords.map((r) => r.createdAt),
   ]);
-  const minutesToday = days.find((d) => d.date === dayKey(today))?.minutes ?? 0;
+  const minutesToday = days.find((d) => d.date === localDateKey(today.getTime()))?.minutes ?? 0;
   const weekDays = days.filter((d) => {
     const then = new Date(`${d.date}T12:00:00`);
     return (today.getTime() - then.getTime()) / 86_400_000 < 7;

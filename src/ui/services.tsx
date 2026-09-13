@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import {
+  ApiClient,
   CuePlayer,
   DEFAULT_LOW_CUT,
   IndexedDbTrialRepository,
@@ -8,7 +9,6 @@ import {
   MemoryTrialRepository,
   MicrophoneEngine,
   Recommender,
-  SyncClient,
   type TrialRepository,
 } from "../core";
 import { loadChoice } from "./hooks/persistentChoice";
@@ -16,9 +16,6 @@ import { loadChoice } from "./hooks/persistentChoice";
 /** Where the microphone low-cut preference is saved, and its valid values. */
 export const MIC_LOW_CUT_KEY = "vc-mic-low-cut";
 export const MIC_LOW_CUT_IDS = LOW_CUT_OPTIONS.map((o) => o.id);
-
-const SYNC_URL =
-  (import.meta.env?.VITE_SYNC_URL as string | undefined) ?? "http://localhost:8799";
 
 /**
  * Composition root: every service is constructed once here and injected
@@ -30,7 +27,7 @@ export interface AppServices {
   cues: CuePlayer;
   kpi: KpiCalculator;
   recommender: Recommender;
-  sync: SyncClient;
+  api: ApiClient;
 }
 
 const ServicesContext = createContext<AppServices | null>(null);
@@ -48,7 +45,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
       cues: new CuePlayer(),
       kpi: new KpiCalculator(),
       recommender: new Recommender(),
-      sync: new SyncClient(SYNC_URL),
+      api: new ApiClient(),
     };
   }, []);
   return <ServicesContext.Provider value={services}>{children}</ServicesContext.Provider>;

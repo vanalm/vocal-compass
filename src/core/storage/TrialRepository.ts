@@ -30,6 +30,15 @@ export interface TrialRepository {
   /** Enforce a (possibly remote) tombstone: store it and drop its target. */
   applyTombstone(stone: Tombstone): Promise<void>;
   tombstones(): Promise<Tombstone[]>;
+  /**
+   * What this device has exchanged with one account (see SyncLedger), kept
+   * beside the records it describes: no storage quota small enough to
+   * outgrow, and `clear` takes it with them.
+   */
+  loadLedger(userId: string): Promise<unknown>;
+  saveLedger(userId: string, ledger: unknown): Promise<void>;
+  forgetLedger(userId: string): Promise<void>;
+  /** Removes every record, tombstone and sync ledger. */
   clear(): Promise<void>;
   exportJson(): Promise<string>;
   importJson(json: string): Promise<number>;
@@ -106,6 +115,7 @@ export class MemoryTrialRepository implements TrialRepository {
   private exerciseSessions: ExerciseSession[] = [];
   private phraseRecords: PhraseRecord[] = [];
   private stones: Tombstone[] = [];
+  private ledgers = new Map<string, unknown>();
 
   async save(record: TrialRecord): Promise<void> {
     this.records = this.records.filter((r) => r.id !== record.id);
@@ -169,12 +179,26 @@ export class MemoryTrialRepository implements TrialRepository {
     return [...this.stones].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  // Copied in and out, as IndexedDB does, so a caller's later changes never reach what was saved.
+  async loadLedger(userId: string): Promise<unknown> {
+    return structuredClone(this.ledgers.get(userId));
+  }
+
+  async saveLedger(userId: string, ledger: unknown): Promise<void> {
+    this.ledgers.set(userId, structuredClone(ledger));
+  }
+
+  async forgetLedger(userId: string): Promise<void> {
+    this.ledgers.delete(userId);
+  }
+
   async clear(): Promise<void> {
     this.records = [];
     this.measurements = [];
     this.exerciseSessions = [];
     this.phraseRecords = [];
     this.stones = [];
+    this.ledgers.clear();
   }
 
   async exportJson(): Promise<string> {

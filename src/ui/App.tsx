@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ServicesProvider } from "./services";
+import { useAccount } from "./hooks/useAccount";
 import { useTrials } from "./hooks/useTrials";
+import { AccountChip } from "./components/AccountChip";
 import { TodayScreen } from "./screens/TodayScreen";
 import { LabScreen } from "./screens/LabScreen";
 import { ProgressScreen } from "./screens/ProgressScreen";
@@ -14,7 +16,10 @@ import type { Lane } from "../core";
 type Screen = "today" | "test" | "quest" | "lab" | "range" | "progress" | "protocol" | "settings";
 
 function Shell() {
-  const [screen, setScreen] = useState<Screen>("today");
+  // Changes pulled from the account refresh the trials below; every local write there schedules a sync.
+  const account = useAccount({ onPulled: () => refresh() });
+  // Back from signing in, which starts on Settings: open there again, where the account card also explains a failure.
+  const [screen, setScreen] = useState<Screen>(account.returningFromSignIn ? "settings" : "today");
 
   const {
     trials,
@@ -26,10 +31,9 @@ function Shell() {
     saveSession,
     savePhrase,
     deleteTrial,
-    clear,
     exportJson,
     refresh,
-  } = useTrials();
+  } = useTrials(account.scheduleSync);
 
   const goToLane = (lane: Lane) => {
     const target: Record<Lane, Screen> = {
@@ -52,14 +56,23 @@ function Shell() {
               <p>Measure your singing, train with feedback, verify the change — methods from the research, data stays yours</p>
             </div>
           </div>
-          <button
-            className="vc-settings-link"
-            aria-current={screen === "settings" ? "page" : undefined}
-            onClick={() => setScreen("settings")}
-          >
-            Settings
-          </button>
+          <div className="vc-topbar-end">
+            <AccountChip account={account} onOpen={() => setScreen("settings")} />
+            <button
+              className="vc-settings-link"
+              aria-current={screen === "settings" ? "page" : undefined}
+              onClick={() => setScreen("settings")}
+            >
+              <span className="vc-settings-label">Settings</span>
+              <span className="vc-settings-icon" aria-hidden="true">
+                ⚙︎
+              </span>
+            </button>
+          </div>
         </header>
+
+        {/* The outline's second level: every screen's card titles are h3s beneath it. */}
+        <h2 className="vc-sr-only">{screen[0].toUpperCase() + screen.slice(1)}</h2>
 
         {screen === "today" && (
           <TodayScreen trials={trials} ranges={ranges} sessions={sessions} phraseRecords={phrases} onGo={goToLane} />
@@ -77,16 +90,17 @@ function Shell() {
             phraseRecords={phrases}
             onGo={goToLane}
             onDeleteTrial={deleteTrial}
-            onSynced={refresh}
+            onOpenAccount={() => setScreen("settings")}
             onExport={() => void exportJson()}
-            onClear={() => void clear()}
+            signedIn={account.user !== null}
+            onClear={() => void account.clearLocalData()}
           />
         )}
         {screen === "range" && (
           <RangeScreen ranges={ranges} onSaveRange={saveRange} onSaveSession={saveSession} />
         )}
         {screen === "protocol" && <ProtocolScreen />}
-        {screen === "settings" && <SettingsScreen />}
+        {screen === "settings" && <SettingsScreen account={account} />}
       </div>
 
       <nav className="vc-nav" aria-label="Primary">

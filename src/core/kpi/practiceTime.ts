@@ -47,7 +47,8 @@ export function practiceDays(
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function localDateKey(epochMs: number): string {
+/** YYYY-MM-DD on the local calendar. toISOString's date is UTC's, already tomorrow on an evening west of Greenwich. */
+export function localDateKey(epochMs: number): string {
   const d = new Date(epochMs);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

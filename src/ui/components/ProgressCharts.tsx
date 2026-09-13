@@ -84,7 +84,10 @@ export function PracticeChart({ days }: { days: PracticeDay[] }) {
   const recent = days.slice(-28);
   const max = Math.max(...recent.map((d) => d.minutes), 1);
   const total = recent.reduce((sum, d) => sum + d.minutes, 0);
-  const barWidth = 100 / recent.length;
+  // A fortnight of slots at least, filled from the right, so one day of practice is one bar rather than a wall.
+  const slots = Math.max(recent.length, 14);
+  const barWidth = 100 / slots;
+  const offset = (slots - recent.length) * barWidth;
 
   return (
     <>
@@ -92,12 +95,13 @@ export function PracticeChart({ days }: { days: PracticeDay[] }) {
         {total} min across {recent.length} day{recent.length === 1 ? "" : "s"} (last 28 shown)
       </p>
       <svg className="vc-chart" viewBox="0 0 100 60" preserveAspectRatio="none" role="img" aria-label="Practice minutes per day">
+        <line x1="0" y1="58" x2="100" y2="58" stroke="#29443a" strokeWidth="1" vectorEffect="non-scaling-stroke" />
         {recent.map((d, i) => {
           const h = (d.minutes / max) * 54;
           return (
             <rect
               key={d.date}
-              x={i * barWidth + barWidth * 0.15}
+              x={offset + i * barWidth + barWidth * 0.15}
               y={58 - h}
               width={barWidth * 0.7}
               height={h}

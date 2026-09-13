@@ -76,13 +76,19 @@ export {
 } from "./pitch/micFilter";
 export type { FilterAdvice, LowCutNodeConfig, LowCutOption } from "./pitch/micFilter";
 export type { HeldExtremes, RangeAnalyzerOptions } from "./pitch/RangeAnalyzer";
-export { practiceDays } from "./kpi/practiceTime";
+export { localDateKey, practiceDays } from "./kpi/practiceTime";
 export { improvementSummary } from "./kpi/improvement";
 export type { ImprovementSummary, Movement, RangeMovement } from "./kpi/improvement";
 export { pitchZones } from "./kpi/pitchZones";
 export type { PitchZone } from "./kpi/pitchZones";
-export { SyncClient } from "./sync/SyncClient";
-export type { KeyValueStore } from "./sync/SyncClient";
+export { ApiClient, ApiError, OfflineError, RetryLaterError, SignedOutError } from "./sync/ApiClient";
+export type { AccountUser, ErrorReport, SyncRecord, SyncRequest, SyncResponse } from "./sync/ApiClient";
+export { SyncLedger } from "./sync/SyncLedger";
+export type { LedgerKind } from "./sync/SyncLedger";
+export { syncAccount } from "./sync/syncAccount";
+export type { SyncResult } from "./sync/syncAccount";
+export { AccountSync } from "./sync/AccountSync";
+export type { AccountPhase, AccountState, AccountStore } from "./sync/AccountSync";
 // Tombstone & SyncRecordKind export via types barrel (export * from "./types")
 export type { PracticeDay, PracticeTimeOptions } from "./kpi/practiceTime";
 export { CuePlayer } from "./audio/CuePlayer";

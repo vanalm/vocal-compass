@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { practiceDays } from "../src/core/kpi/practiceTime";
+import { localDateKey, practiceDays } from "../src/core/kpi/practiceTime";
 
 /** Local-time ISO stamp so date bucketing matches in any test timezone. */
 const at = (y: number, mo: number, d: number, h: number, mi: number) =>
@@ -7,6 +7,13 @@ const at = (y: number, mo: number, d: number, h: number, mi: number) =>
 
 const dateKey = (y: number, mo: number, d: number) =>
   `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+describe("localDateKey", () => {
+  it("dates a moment by the local calendar, late evenings included", () => {
+    expect(localDateKey(new Date(2026, 8, 12, 23, 59).getTime())).toBe("2026-09-12");
+    expect(localDateKey(new Date(2026, 0, 3, 0, 0).getTime())).toBe("2026-01-03");
+  });
+});
 
 describe("practiceDays", () => {
   it("returns empty for no records", () => {

@@ -2,7 +2,10 @@ import type { ExerciseSession, PhraseRecord, RangeMeasurement, Tombstone, TrialR
 import { buildExportJson, importInto, type TrialRepository } from "./TrialRepository";
 
 const DB_NAME = "vocal-compass";
-const DB_VERSION = 5; // v2 ranges; v3 sessions; v4 tombstones; v5 phrases
+// v2 ranges; v3 sessions; v4 tombstones; v5 phrases; v7 sync ledgers. Development builds briefly opened
+// v6 without the ledger store, so ledgers take 7: the upgrade adds whatever is missing either way.
+const DB_VERSION = 7;
+const LEDGERS = "syncLedgers"; // keyed by user id
 const PHRASES = "phrases";
 const TOMBSTONES = "tombstones";
 const SESSIONS = "sessions";
@@ -42,8 +45,14 @@ export class IndexedDbTrialRepository implements TrialRepository {
             const store = db.createObjectStore(PHRASES, { keyPath: "id" });
             store.createIndex("createdAt", "createdAt");
           }
+          if (!db.objectStoreNames.contains(LEDGERS)) db.createObjectStore(LEDGERS);
         };
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+          const db = request.result;
+          // A newer version of the app in another tab needs to upgrade: let it, rather than block it until this tab closes.
+          db.onversionchange = () => db.close();
+          resolve(db);
+        };
         request.onerror = () => reject(request.error ?? new Error("IndexedDB open failed."));
       });
     }
@@ -130,12 +139,25 @@ export class IndexedDbTrialRepository implements TrialRepository {
     return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  loadLedger(userId: string): Promise<unknown> {
+    return this.tx(LEDGERS, "readonly", (store) => store.get(userId));
+  }
+
+  async saveLedger(userId: string, ledger: unknown): Promise<void> {
+    await this.tx(LEDGERS, "readwrite", (store) => store.put(ledger, userId));
+  }
+
+  async forgetLedger(userId: string): Promise<void> {
+    await this.tx(LEDGERS, "readwrite", (store) => store.delete(userId));
+  }
+
   async clear(): Promise<void> {
     await this.tx(TRIALS, "readwrite", (store) => store.clear());
     await this.tx(RANGES, "readwrite", (store) => store.clear());
     await this.tx(SESSIONS, "readwrite", (store) => store.clear());
     await this.tx(PHRASES, "readwrite", (store) => store.clear());
     await this.tx(TOMBSTONES, "readwrite", (store) => store.clear());
+    await this.tx(LEDGERS, "readwrite", (store) => store.clear());
   }
 
   async exportJson(): Promise<string> {

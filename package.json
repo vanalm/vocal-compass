@@ -6,6 +6,7 @@
   "description": "Local-first melodic navigation trainer: train the destination, not just the landing.",
   "scripts": {
     "dev": "vite",
+    "api": "cd server && .venv/bin/uvicorn --factory vocal_compass.app:create_app --reload --port 8799",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",

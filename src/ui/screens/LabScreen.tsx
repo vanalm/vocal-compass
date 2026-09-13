@@ -174,7 +174,7 @@ export function LabScreen({
         {runner.micError && <p className="vc-small" style={{ color: "#ffbdc5" }}>{runner.micError}</p>}
 
         {runner.phase === "idle" && (
-          <div className="vc-prompt" style={{ marginTop: 90 }}>
+          <div className="vc-prompt vc-stage-prompt">
             <h3>{exercise.title}</h3>
             <p>{exercise.subtitle}</p>
             <p className="vc-small" style={{ marginTop: 10 }}>
@@ -187,7 +187,7 @@ export function LabScreen({
         )}
 
         {runner.phase === "listen" && (
-          <div className="vc-prompt" style={{ marginTop: 110 }}>
+          <div className="vc-prompt vc-stage-prompt listen">
             <h3>Listen</h3>
             <p>Key of {trial?.keyName}.</p>
             <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? undefined} />
@@ -195,7 +195,7 @@ export function LabScreen({
         )}
 
         {runner.phase === "imagine" && trial && (
-          <div className="vc-prompt" style={{ marginTop: 60 }}>
+          <div className="vc-prompt vc-stage-prompt imagine">
             <h3>Imagine</h3>
             <p>{runner.prompt}</p>
             <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? undefined} />
@@ -220,7 +220,7 @@ export function LabScreen({
         )}
 
         {runner.phase === "sing" && trial && (
-          <div className="vc-prompt" style={{ marginTop: 40 }}>
+          <div className="vc-prompt vc-stage-prompt sing">
             <h3>Sing</h3>
             <p>Commit to one note. Capture stops automatically.</p>
             <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
