@@ -1,69 +1,65 @@
 # Handoff — Vocal Compass
 
 Local-first singing trainer: measure pitch and range, train with feedback,
-verify change against your own baseline. Vite + React + TypeScript; optional
-FastAPI + SQLAlchemy sync server in `server/`.
+verify change against your own baseline. Vite + React + TypeScript SPA, a
+FastAPI API in `server/`, one Docker image, Terraform for Google Cloud, and
+GitHub Actions for CI and deploys.
 
 ## Run it
 
 ```bash
-npm run dev                      # app on http://localhost:5199
-npm test && npm run build        # vitest + type-check/bundle
+npm run dev                    # app on http://localhost:5199, proxying /api to :8799
+npm run api                    # API in development mode: dev sign-in, SQLite, migrates itself
+npm test && npm run build      # vitest + type-check/bundle
 cd server && .venv/bin/python -m pytest -q
-cd server && VC_DB_URL="sqlite:///$PWD/dev.db" .venv/bin/uvicorn app:app --port 8799
+docker compose up --build      # the production image + Postgres on http://localhost:8090
 ```
-
-The sync server does not hot-reload: restart it after changing `server/app.py`.
 
 ## State right now (2026-09-12)
 
-- `main` at `56bb59b`, **25 commits ahead of origin, nothing pushed**.
-- **Uncommitted work in the tree belongs to another Claude session** (Test/Lab
-  walkthrough: `ExerciseInfo.tsx`, `CuePlayer.stop()`, `useTrialRunner`
-  `options.flow`, exercise guides). Don't commit or revert it. It also holds
-  unstaged hunks in `src/core/index.ts` and `src/styles.css`.
-- Suites green at `56bb59b`, verified alone in a clean worktree.
+- The production stack is committed on `main`; nothing is pushed, and
+  **`vanalm/vocal-compass` is a public repo**, so pushing publishes all of it.
+- Green at the last run: web unit tests, the API suite on SQLite and on
+  Postgres 16, `mypy --strict`, Terraform `validate` + `test` in every root,
+  actionlint, and an image build with a compose smoke test (sign-in and a
+  two-device sync round trip).
+- **Nothing exists in Google Cloud yet.** `terraform/README.md` is the runbook.
 
-## Recently shipped
+## To go live, in order
 
-| Commit | What |
-|---|---|
-| `56bb59b` | Settings screen; mic low-cut filter (Off / 60 default / 80 / 100); filter recorded per range measurement; range summary suggests a switch when results point at the filter |
-| `7c41927` | Range walk as turn-taking: listen → pause → sing → result → next; keyboard strip, per-note feedback, coaching tips, summary insights |
-| `7c924f7` | Phrase format (degrees + rhythm + Nashville chords) and Echo Quest |
-| `8734862` | Productionization plan (GCP, the goal tracker stack) — plan only, nothing built |
+1. **WorkOS:** in the existing account (the one the goal tracker uses), add a Vocal Compass
+   project with staging and production environments, set each redirect and
+   sign-out URL, and put the client IDs into `terraform/envs/*/*.auto.tfvars`.
+   This was blocked here: the browser was signed out of WorkOS.
+2. **Project:** `gcloud projects create vocal-compass` and link billing. If the
+   id is taken, choose a suffix and replace it in the three `*.auto.tfvars`.
+3. **Values:** `domain` in `envs/prod/prod.auto.tfvars`; `alert_email` in each
+   env's gitignored `terraform.tfvars` (never committed — the repo is public).
+4. **Apply** per `terraform/README.md`: bootstrap → WorkOS API keys into Secret
+   Manager → first image → staging, then prod → Cloudflare DNS-only A record →
+   GitHub Environment `production` with reviewers, then the repo variables.
 
 ## Open items, in priority order
 
-1. **Don't expose the sync server publicly.** Sign-in codes are echoed in
-   responses (`VC_ECHO_CODES` defaults on), `/auth/verify` has no rate limit,
-   and session tokens are stored in plaintext. Phase 1 of
-   `docs/productionization-plan.md` fixes all three (~half a day).
+1. Go live (above).
 2. **Real-voice checks.** Every mic feature was verified with a synthetic
-   singer, not a person. The low-note filter advice in particular is
-   unconfirmed on a real deep voice: in valid tests the old 80 Hz filter
-   never cost a note down to C2.
-3. **After the other session commits:** switch `useTrialRunner.ts` to import
-   from `src/ui/hooks/flowMode.ts`. Keep its `options.flow ?? loadFlowMode()`
-   initializer and the `setFlowMode` return shape.
-4. The Lab/Test "too noisy" warnings could suggest the Noisy filter, like the
-   range summary does (those screens belong to the other session's work).
-5. Productionization decisions for the user: infra split, domain, WorkOS
-   tenant, open vs allowlisted signup, migrating local data
-   (`docs/productionization-plan.md` §13).
-6. Next feature per `docs/vocal-musicianship-roadmap.md`: Run Forge (tempo
+   singer. The low-note filter advice is unconfirmed on a real deep voice.
+3. **Known, documented limits:** rate limits count per Cloud Run instance; a
+   Cloud SQL point-in-time restore needs a sync generation marker before
+   clients re-pull cleanly (`server/README.md`).
+4. Next feature per `docs/vocal-musicianship-roadmap.md`: Run Forge (a tempo
    staircase over the phrase format).
 
-The 8-week pitch block lives in the goal tracker (goal ids →
-goal ids). The final edge into goal ids would not
-create; the goal tracker's `add_task` returned null three times.
+the goal tracker: the 8-week pitch block (goal ids → goal ids) now
+links into goal ids. the goal tracker notes that goal has three incoming tasks,
+which it reads as alternatives; fold them into one multi-origin task if all
+three are required.
 
 ## Gotchas learned the hard way
 
 - **The preview browser blocks the microphone.** Test mic flows with a
   synthetic singer (paste into the page console). Return a *fresh* stream on
-  every `getUserMedia` call: the app stops tracks on `stop()`, and a reused
-  stream silently turns every later run into silence.
+  every `getUserMedia` call: the app stops tracks on `stop()`.
 
   ```js
   const ctx = new AudioContext();
@@ -81,16 +77,21 @@ create; the goal tracker's `add_task` returned null three times.
   }, 25);
   ```
 
-- **The shell is zsh.** An unquoted `$VAR` holding several paths is *not*
-  split, and `set -e` did not stop a failing script in this tool. List paths
-  literally and check each step explicitly.
-- **Two sessions share this tree.** For a shared file, stage "HEAD + your
-  hunks only" (`git hash-object -w --stdin` + `git update-index --cacheinfo`),
-  then build and test the commit alone in a `git worktree` before trusting
-  it.
+  For the too-noisy warning, loop a buffer of white noise into the stream
+  instead.
+- **Docker in agent sessions:** Docker Desktop's credential helper hangs. Point
+  `DOCKER_CONFIG` at a scratch directory holding `{"auths":{}}` and a symlink
+  to `~/.docker/cli-plugins` (without it, BuildKit is missing).
+- **Port 8080 is taken locally** by the `another local service's` container; compose uses
+  8090.
+- **`WORKOS_COOKIE_PASSWORD` is a Fernet key** (32 random bytes, base64), not a
+  password. Terraform generates it.
+- **The console log in the preview browser survives reloads.** Count errors
+  before an action and compare, or stale hot-reload errors look like new bugs.
+- **The shell is zsh.** An unquoted `$VAR` holding several paths is not split.
 
 ## Read next
 
-`README.md` (architecture) · `docs/training-protocol-decision.md` (8-week
-protocol + evidence) · `docs/range-training-evidence.md` (range method,
-safety) · `docs/vocal-musicianship-roadmap.md` · `docs/productionization-plan.md`
+`README.md` · `terraform/README.md` · `server/README.md` ·
+`docs/training-protocol-decision.md` · `docs/vocal-musicianship-roadmap.md` ·
+`docs/productionization-plan.md`

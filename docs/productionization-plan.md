@@ -1,5 +1,30 @@
 # Productionization plan: Vocal Compass on Google Cloud
 
+> **Status, 2026-09-12: built.** This plan was implemented in one pass; operate
+> the result from `terraform/README.md` and `server/README.md`. Where the build
+> departs from the plan below:
+>
+> - **One container, no SPA bucket.** FastAPI serves the built SPA and `/api`,
+>   so a release can never pair an old SPA with a new API. Cloud CDN sits on
+>   the Cloud Run backend and follows the app's own cache headers.
+> - **Standalone project** (`vocal-compass`) with its own load balancer in
+>   prod; staging serves on its `run.app` URL. the reference stack's load balancer is untouched.
+> - **Sync** uses one per-user sequence cursor across every record kind, and
+>   each device's ledger lives in IndexedDB, so there is no `device` table.
+> - **Traces stay inside each record's JSONB payload**; a Postgres
+>   `trace_frame` view gives frame-level SQL without a second table or upload.
+> - **Observability** has no analytics tables: domain events are log lines a
+>   log sink routes to BigQuery, plus log-based metrics, seven alerts, an
+>   uptime check and a dashboard.
+> - **Auth modes** are `workos` and `dev`; signed-out use needs no server mode.
+>   Signup is open, and `AUTH_ALLOWED_EMAILS` replaces the allowlist table.
+> - **Added in review:** a Fernet cookie key, per-path body caps with a sync
+>   concurrency guard, trusted proxy hops for client IPs, a hashed dependency
+>   lock, deploy credentials pinned to the repository id and `main`, and
+>   deploys gated on CI.
+>
+> Sections 11–13 are kept as the record of how the work was scoped and decided.
+
 Target: the same operational shape as a sibling service — Cloud Run + Cloud SQL
 Postgres + Terraform + GitHub Actions with Workload Identity Federation +
 WorkOS AuthKit + JSON-line logging into Cloud Logging. One set of
