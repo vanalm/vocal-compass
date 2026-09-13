@@ -1,0 +1,18 @@
+# Local working files. Committed on purpose: .terraform.lock.hcl (same provider
+# hashes on every machine) and *.auto.tfvars (non-secret settings).
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ad-hoc tfvars may hold secrets; plan files embed generated passwords.
+*.tfvars
+*.tfvars.json
+!*.auto.tfvars
+*.tfplan
