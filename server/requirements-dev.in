@@ -1,0 +1,6 @@
+# Test dependencies, locked in requirements-dev.txt at requirements.txt's versions so tests run what the image ships.
+-r requirements.in
+-c requirements.txt
+pytest==9.1.1
+# Starlette 1.x's TestClient is built on httpx2 and deprecates plain httpx.
+httpx2==2.12.0

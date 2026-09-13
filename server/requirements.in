@@ -1,0 +1,11 @@
+# Direct runtime dependencies. requirements.txt locks these and everything they pull in, with hashes;
+# after changing this file, regenerate it with the command in its header.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.5
+sqlalchemy==2.0.52
+alembic==1.20.0
+psycopg[binary]==3.3.5
+workos==10.3.0
+# Not imported: anyio 4.15 deprecates an alias Starlette 1.6's TestClient imports. Lift once Starlette stops.
+anyio<4.15
