@@ -1,10 +1,9 @@
 # Decision record: the 8-week Vocal Compass training protocol
 
-- **Status:** proposed (pending sign-off; on sign-off this is pushed to the goal tracker
-  under the deep goal *Fluent musical self-expression (voice + guitar)*)
+- **Status:** proposed (pending sign-off)
 - **Date:** 2026-08-28
-- **Deciders:** the maintainer, with literature synthesis by Claude (two research
-  sweeps, 2026-08-28; ~29 primary sources)
+- **Deciders:** the project maintainer, with literature synthesis by Claude
+  (two research sweeps, 2026-08-28; ~29 primary sources)
 
 ## Decision
 
@@ -12,8 +11,8 @@ Follow an 8-week protocol: 2 weeks of app verification + KPI baselining,
 then 6 weeks of distributed practice (4 sessions/week × ~15 min) across
 Vocal Compass's five modules, with feedback **faded** over the phase
 (live → commit-then-reveal → blind) and all KPI measurement taken on
-blind trials. Weekly dated bullets with KPI targets live in the goal tracker; the
-app's `KpiCalculator` is the measurement instrument.
+blind trials. Weekly KPI targets are listed under KPIs below; the app's
+`KpiCalculator` is the measurement instrument.
 
 ## What the evidence says to expect in 8 weeks
 
@@ -35,10 +34,10 @@ app's `KpiCalculator` is the measurement instrument.
   2021; Blanco, Tassani & Ramirez 2021). This is why KPIs are measured
   blind and feedback is faded, not constant.
 - **What will NOT happen in 8 weeks:** expert-level accuracy;
-  full closure for the hardest passages/registers; and if a genuine
-  perceptual deficit existed (congenital amusia, ~1.5% prevalence —
-  Peretz & Vuvan 2017), progress would be slow and partial (Anderson et
-  al. 2012). The overwhelmingly likely case is a trainable
+  full closure for the hardest passages/registers; and for a learner with
+  a genuine perceptual deficit (congenital amusia, ~1.5% prevalence —
+  Peretz & Vuvan 2017), progress is slow and partial (Anderson et al.
+  2012). For most inaccurate adult singers the likely case is a trainable
   vocal-motor *mapping* deficit, not a perceptual one (Hutchins & Peretz
   2012), and adult inaccuracy tracks disuse, not fixed talent (Demorest
   & Pfordresher 2015 — college students score *below* 6th-graders).
@@ -115,9 +114,9 @@ independent accuracy ≥70% by W6; residual <50 cents on correct targets
 by W8; noisy-environment accuracy within 10 pts of quiet-room by W7.
 Adjust relative to the actual W2 baseline, not aspiration.
 
-## Deeper-goal chain
+## Transfer
 
-Protocol → **Fluent musical self-expression (voice + guitar)** → a deeper personal goal. The
+The protocol serves a broader goal, fluent musical self-expression. The
 music-stack Studio (play-along) is the transfer surface: trained
 navigation skill gets spent on real songs weekly.
 

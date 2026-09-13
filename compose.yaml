@@ -32,7 +32,7 @@ services:
       RUN_MIGRATIONS_ON_START: "1"
       LOG_FORMAT: json
     ports:
-      # 8090, not 8080, which other local stacks use.
+      # Host port 8090 leaves the common 8080 free for other services.
       - "127.0.0.1:8090:8080"
     depends_on:
       db:

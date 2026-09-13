@@ -37,7 +37,7 @@ renumbering.
 | Harmony Lock / Duet Dropout | Planned: guide in headphones, mic hears only the singer; dropout = scheduled guide gaps; drift + re-entry metrics from existing pipeline |
 | Rhythm-only echo | Planned: scorer already measures onsets; needs a rhythm-only mode (any pitch accepted) |
 | Stack Your Choir / recordings | Planned: trace playback exists in concept (synth from trace); overdub mixing is new |
-| Song Lab / Chart Karaoke | Planned: marry the music-stack Studio (chords-as-played, sections, lyrics) to phrase scoring — the transfer surface named in the goal tracker plan |
+| Song Lab / Chart Karaoke | Planned: marry the music-stack Studio (chords-as-played, sections, lyrics) to phrase scoring — the transfer surface named in `training-protocol-decision.md` |
 | Skill tree + mastery gating (2 days, 2 keys, 1 novel) | Planned: all inputs already persisted (key, phraseId, verified, createdAt) — it is a pure query |
 | Rescue Drill auto-routing | Partial: fix-line heuristics exist; auto-inserting a 20s corrective loop is UI work |
 | Error routing (late→subdivision, guided-only→recall, etc.) | Planned on top of stored per-note results |

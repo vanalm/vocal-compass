@@ -27,10 +27,9 @@ docker compose up --build      # the production image + Postgres on http://local
 
 ## To go live, in order
 
-1. **WorkOS:** in the existing account (the one the goal tracker uses), add a Vocal Compass
-   project with staging and production environments, set each redirect and
-   sign-out URL, and put the client IDs into `terraform/envs/*/*.auto.tfvars`.
-   This was blocked here: the browser was signed out of WorkOS.
+1. **WorkOS:** in your WorkOS account, add a Vocal Compass project with
+   staging and production environments, set each redirect and sign-out URL,
+   and put the client IDs into `terraform/envs/*/*.auto.tfvars`.
 2. **Project:** `gcloud projects create vocal-compass` and link billing. If the
    id is taken, choose a suffix and replace it in the three `*.auto.tfvars`.
 3. **Values:** `domain` in `envs/prod/prod.auto.tfvars`; `alert_email` in each
@@ -49,11 +48,6 @@ docker compose up --build      # the production image + Postgres on http://local
    clients re-pull cleanly (`server/README.md`).
 4. Next feature per `docs/vocal-musicianship-roadmap.md`: Run Forge (a tempo
    staircase over the phrase format).
-
-the goal tracker: the 8-week pitch block (goal ids → goal ids) now
-links into goal ids. the goal tracker notes that goal has three incoming tasks,
-which it reads as alternatives; fold them into one multi-origin task if all
-three are required.
 
 ## Gotchas learned the hard way
 
@@ -79,16 +73,17 @@ three are required.
 
   For the too-noisy warning, loop a buffer of white noise into the stream
   instead.
-- **Docker in agent sessions:** Docker Desktop's credential helper hangs. Point
-  `DOCKER_CONFIG` at a scratch directory holding `{"auths":{}}` and a symlink
-  to `~/.docker/cli-plugins` (without it, BuildKit is missing).
-- **Port 8080 is taken locally** by the `another local service's` container; compose uses
-  8090.
+- **Docker in headless sessions (agents, scripts):** if Docker Desktop's
+  credential helper hangs, point `DOCKER_CONFIG` at a scratch directory holding
+  `{"auths":{}}` and a symlink to `~/.docker/cli-plugins` (without it, BuildKit
+  is missing).
+- **Compose publishes on 8090**, not 8080, to stay clear of other local
+  services that commonly hold 8080.
 - **`WORKOS_COOKIE_PASSWORD` is a Fernet key** (32 random bytes, base64), not a
   password. Terraform generates it.
 - **The console log in the preview browser survives reloads.** Count errors
   before an action and compare, or stale hot-reload errors look like new bugs.
-- **The shell is zsh.** An unquoted `$VAR` holding several paths is not split.
+- **Under zsh**, an unquoted `$VAR` holding several paths is not split.
 
 ## Read next
 

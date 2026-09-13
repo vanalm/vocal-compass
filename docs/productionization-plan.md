@@ -8,7 +8,8 @@
 >   so a release can never pair an old SPA with a new API. Cloud CDN sits on
 >   the Cloud Run backend and follows the app's own cache headers.
 > - **Standalone project** (`vocal-compass`) with its own load balancer in
->   prod; staging serves on its `run.app` URL. the reference stack's load balancer is untouched.
+>   prod; staging serves on its `run.app` URL. No load balancer is shared with
+>   another project.
 > - **Sync** uses one per-user sequence cursor across every record kind, and
 >   each device's ledger lives in IndexedDB, so there is no `device` table.
 > - **Traces stay inside each record's JSONB payload**; a Postgres
@@ -25,29 +26,30 @@
 >
 > Sections 11–13 are kept as the record of how the work was scoped and decided.
 
-Target: the same operational shape as a sibling service — Cloud Run + Cloud SQL
-Postgres + Terraform + GitHub Actions with Workload Identity Federation +
-WorkOS AuthKit + JSON-line logging into Cloud Logging. One set of
-conventions across both projects, so what you learn operating one applies
+Target: a proven production shape — Cloud Run + Cloud SQL Postgres +
+Terraform + GitHub Actions with Workload Identity Federation + WorkOS
+AuthKit + JSON-line logging into Cloud Logging. It is the stack a sibling
+service already runs in production ("the reference stack" below), so one
+set of conventions covers both and what is learned operating one applies
 to the other.
 
-Written 2026-09-12 against a survey of `a sibling service's repository`. Where this
-plan says "as the reference stack does", a real file in that repo is the reference.
+Written 2026-09-12 against a survey of that service.
 
 ---
 
 ## 1. The one thing we do NOT copy
 
-the reference stack is **server-authoritative**: the browser holds nothing, the API is the
-truth. Vocal Compass is **local-first** and that is a feature, not an
-accident — you practice in a car with no signal and it works. So:
+The reference stack is **server-authoritative**: the browser holds nothing,
+the API is the truth. Vocal Compass is **local-first** and that is a
+feature, not an accident — you practice in a car with no signal and it
+works. So:
 
 - **IndexedDB stays the source of truth.** The server is a backup, a
   multi-device merge point, and the analytics warehouse.
 - **Sign-in stays optional.** Unauthenticated use is a supported mode
   forever, not an onboarding step to get past.
 - Everything else — hosting, auth mechanism, database, logging, IaC,
-  CI/CD, security posture — mirrors the reference stack.
+  CI/CD, security posture — follows the reference stack.
 
 ---
 
@@ -103,38 +105,38 @@ session cookie needs no CORS and no token ever touches JavaScript.
 
 ---
 
-## 4. Auth: WorkOS AuthKit, BFF sealed-cookie (as the reference stack does)
+## 4. Auth: WorkOS AuthKit, BFF sealed-cookie
 
 Delete the magic-code system entirely. AuthKit hosts signup, sign-in,
 password reset, and social providers; **we never handle a password**.
-Free below 1M monthly active users, and it is already the pattern you
-operate in the reference stack.
+Free below 1M monthly active users, and a pattern already proven in the
+reference stack.
 
-Flow, mirroring `backend/controllers/auth_session.py` and
-`backend/auth/session_cookie.py`:
+Flow:
 
 1. `GET /api/auth/login?screen_hint=sign-up` → redirect to AuthKit.
 2. `GET /api/auth/callback?code=…` → exchange server-side, seal the WorkOS
    session into an **HttpOnly, Secure, SameSite=Lax** cookie
    (`vc_session`, 30-day max-age), redirect back to the SPA.
-3. Every request: `backend/auth/dependencies.py`-equivalent unseals the
-   cookie; an expired-but-refreshable session auto-refreshes and
-   re-`Set-Cookie`s mid-request.
+3. Every request: an auth dependency unseals the cookie; an
+   expired-but-refreshable session auto-refreshes and re-`Set-Cookie`s
+   mid-request.
 4. `POST /api/auth/logout` clears it; **sign-out-everywhere** revokes the
    WorkOS session.
 
 `AUTH_MODE` = `fixed` (local dev + CI, a fixed fake user) | `workos`
 (staging/prod, hard-fail if unset) | `anonymous` (local-first, no account).
-That last mode is our addition to the reference stack pattern and is what keeps the
-offline promise honest.
+That last mode is our addition to the usual BFF pattern and is what keeps
+the offline promise honest.
 
-**Identity linking** as the reference stack does it (`auth/identity_resolver.py`): match on
-`workos_sub`, fall back to email, backfill `workos_sub`.
+**Identity linking:** match on `workos_sub`, fall back to email, backfill
+`workos_sub`.
 
-**Open signup or allowlist?** the reference stack gates on `allowlist_entry` + an email
-allowlist file because its hosted signup is open. Recommend: open signup
-for Vocal Compass (it is a training app, not a private workspace), with the
-allowlist table built but empty and `AUTH_ENFORCE_ALLOWLIST=false`.
+**Open signup or allowlist?** AuthKit's hosted signup is open, so a private
+workspace would gate it with an `allowlist_entry` table plus an email
+allowlist file. Recommend: open signup for Vocal Compass (it is a training
+app, not a private workspace), with the allowlist table built but empty and
+`AUTH_ENFORCE_ALLOWLIST=false`.
 
 ---
 
@@ -142,8 +144,7 @@ allowlist table built but empty and `AUTH_ENFORCE_ALLOWLIST=false`.
 
 Cloud SQL **Postgres 16**, SQLAlchemy 2.0 `Mapped[]` style, **Alembic**
 migrations run from the container entrypoint when
-`RUN_MIGRATIONS_ON_START=1` — exactly the reference stack's
-`deploy/docker/entrypoint.sh`.
+`RUN_MIGRATIONS_ON_START=1`.
 
 The design principle: **typed columns for everything you aggregate on,
 JSONB for fidelity.** The current kind-keyed blob table made adding a
@@ -253,7 +254,7 @@ pitch_trace
   rms               real[]
   created_at        timestamptz
 
--- observability, the reference stack pattern ------------------------------------------
+-- observability -------------------------------------------------------
 analytics_span    (id, user_id, name, started_at, ended_at, duration_ms, attrs jsonb)
 analytics_event   (id, span_id, user_id, name, at, attrs jsonb)
 
@@ -296,36 +297,35 @@ Replace with cursor-based incremental sync:
 
 ---
 
-## 7. Logging and observability (as the reference stack does)
+## 7. Logging and observability
 
-- **Stdlib `logging`** with a JSON-line formatter — the reference stack's
-  `backend/logging/utils.py` `_JsonFormatter` is copyable verbatim. Cloud
-  Logging ingests stdout and parses the JSON into structured fields. No
-  `google-cloud-logging` dependency.
+- **Stdlib `logging`** with a small JSON-line formatter (a
+  `logging.Formatter` subclass). Cloud Logging ingests stdout and parses
+  the JSON into structured fields. No `google-cloud-logging` dependency.
 - `redact_keys()` for anything sensitive; **assert in a test** that a
-  session cookie value never appears in log output (the reference stack has the equivalent
-  test for API keys).
+  session cookie value never appears in log output (the same kind of test
+  that guards API keys).
 - **Request middleware** opens a span per request, logs method, path,
   status, duration, user id, request id; persists to `analytics_span` /
   `analytics_event`.
 - Domain events worth recording from day one: `auth.signup`,
   `auth.login`, `sync.push` (counts + bytes), `trial.saved`,
   `phrase.saved`, `range.measured`, `account.deleted`.
-- **Alerting** via `terraform/modules/gcp-monitoring` equivalent: a
-  log-based metric on `severity>=ERROR`, an uptime check on `/health`, and
-  an email channel. Copy the reference stack's module.
+- **Alerting** via a Terraform monitoring module: a log-based metric on
+  `severity>=ERROR`, an uptime check on `/health`, and an email channel.
 - Health endpoints: `/health` (liveness, no DB) and `/ready` (readiness,
-  touches the DB) — Cloud Run probes them, as the reference stack's `cloudrun.tf` does.
+  touches the DB) — Cloud Run's startup and liveness probes hit them.
 
-Deliberately skipped, matching the reference stack: no Sentry, no OpenTelemetry. If you
-want error aggregation later, add it to both projects at once.
+Deliberately skipped, as in the reference stack: no Sentry, no
+OpenTelemetry. Error aggregation can be added later if logs stop being
+enough.
 
 ---
 
 ## 8. Config and secrets
 
 - Pydantic settings model + layered loader (`config.json` defaults ← env ←
-  validate), mirroring `backend/configuration/`.
+  validate).
 - **Secret Manager** containers and IAM owned by Terraform; **values added
   out-of-band** with `gcloud secrets versions add` so an apply can never
   clobber them. Per-secret `secretAccessor` to the service account, never a
@@ -345,9 +345,9 @@ want error aggregation later, add it to both projects at once.
 | CORS | Explicit allowlist from env; localhost origins **only outside staging/prod**. Same-origin in prod means CORS is mostly moot. |
 | Security headers | `SecurityHeadersMiddleware`: HSTS 2y, CSP `default-src 'self'`, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` |
 | Body size cap | 10 MB (traces are the biggest payload), 413 on `Content-Length` |
-| Rate limiting | Sliding-window per-user/IP on auth (5/min), sync (60/min), traces (30/min). the reference stack's `rate_limiter.py` is copyable; note it is **per-instance**, acceptable at min=0..2 |
+| Rate limiting | Sliding-window per-user/IP on auth (5/min), sync (60/min), traces (30/min). An in-process limiter is enough; note it is **per-instance**, acceptable at min=0..2 |
 | Docs endpoints | `/docs`, `/redoc`, `/openapi.json` disabled when `ENVIRONMENT` is staging/production |
-| Open redirect | Safe-path regex on any `next` param (the reference stack `_SAFE_PATH_RE`) |
+| Open redirect | Safe-path regex on any `next` param |
 | Dependency scan | `scripts/ci/dependency_scan.sh` gating CI **and** deploy |
 | Account deletion | `DELETE /api/account` — cascade all user rows, revoke WorkOS session, return the export first |
 | Data export | `GET /api/account/export` → the same JSON the client already writes |
@@ -356,17 +356,17 @@ want error aggregation later, add it to both projects at once.
 
 ## 10. Deploy topology, IaC, CI/CD
 
-**Terraform**, structured as the reference stack: `bootstrap/` (WIF pool, deployer SA,
+**Terraform**, in three layers: `bootstrap/` (WIF pool, deployer SA,
 Artifact Registry) + `modules/` + `envs/{staging,prod}` with
 `*.auto.tfvars`.
 
 **Cloud Run v2**, `vc-<env>-backend`, `us-west1` (co-located with the
-Cloud SQL instance), cpu 1 / memory 512Mi, **min instances 0** — unlike the reference stack
-there is no in-process background work, so cold starts are acceptable and
-the idle cost is zero.
+Cloud SQL instance), cpu 1 / memory 512Mi, **min instances 0** — there is
+no in-process background work, so cold starts are acceptable and the idle
+cost is zero.
 
 **Dockerfile**: `python:3.12-slim`, non-root uid 1000, entrypoint runs
-Alembic then execs uvicorn. Copy the reference stack's.
+Alembic then execs uvicorn.
 
 **GitHub Actions**, keyless via Workload Identity Federation, all actions
 SHA-pinned:
@@ -409,35 +409,35 @@ it is small and it is the difference between "insecure but private" and
 Standalone, the expensive line is the **load balancer** (~$18/mo for
 forwarding rules), not the compute:
 
-| Item | Standalone | Sharing the reference stack infra |
+| Item | Standalone | Sharing existing infra |
 |---|---|---|
-| Global external ALB | ~$18/mo | **$0** (add a host rule to the reference stack's LB) |
-| Cloud SQL db-f1-micro | ~$9/mo | **$0** (add a `vocal` database to the reference stack's instance) |
+| Global external ALB | ~$18/mo | **$0** (add a host rule to an existing LB) |
+| Cloud SQL db-f1-micro | ~$9/mo | **$0** (add a `vocal` database to an existing instance) |
 | Cloud Run (min=0) | ~$0-3/mo | ~$0-3/mo |
 | GCS + CDN + Artifact Registry | ~$1/mo | ~$1/mo |
 | **Total** | **~$30/mo** | **~$4/mo** |
 
-the reference stack's LB already does host-based routing and its Cloud SQL instance is
-nowhere near capacity. Adding `vocalcompass.<your-domain>` as a host rule
+If another service's LB already does host-based routing and its Cloud SQL
+instance has headroom, adding `vocalcompass.<your-domain>` as a host rule
 plus a second database on the same instance is the cheap, conventional
 move — and it keeps one Terraform state to operate.
 
 The argument against: blast radius. A bad Vocal Compass migration runs on
-the same Postgres instance as the reference stack (different database, but same instance
-and same maintenance window), and a Terraform mistake touches shared
-infra. Given the reference stack is the thing with real users and Vocal Compass is
-personal, **separate project, shared LB only** is the middle path I would
-actually pick: own Cloud SQL (isolated blast radius, $9/mo), shared LB
-(saves $18/mo, one DNS story).
+the same Postgres instance as the other service (different database, but
+same instance and same maintenance window), and a Terraform mistake
+touches shared infra. When the other service already has real users and
+Vocal Compass is new, **separate project, shared LB only** is the middle
+path I would actually pick: own Cloud SQL (isolated blast radius, $9/mo),
+shared LB (saves $18/mo, one DNS story).
 
 ---
 
 ## 13. Decisions needed before Phase 2
 
-1. **Infra split**: shared the reference stack project / separate project with shared LB
-   (recommended) / fully standalone?
-2. **Domain**: subdomain of the reference stack domain, or its own?
-3. **WorkOS**: new tenant, or a second application in the existing one?
-4. **Signup**: open, or allowlist-gated like the reference stack?
+1. **Infra split**: project shared with an existing service / separate
+   project with shared LB (recommended) / fully standalone?
+2. **Domain**: subdomain of an existing domain, or its own?
+3. **WorkOS**: new tenant, or a second application in an existing one?
+4. **Signup**: open, or allowlist-gated?
 5. **Existing data**: your local IndexedDB records — migrate into the first
    account on sign-in, or start clean?
