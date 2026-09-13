@@ -1,0 +1,141 @@
+# Deploy: a commit that passes CI on main is built into an image once, tagged with the commit, and
+# that same image is promoted to staging and, after a reviewer approves the `production`
+# environment, to prod. Each rollout must pass a smoke test that finds the new release serving.
+#
+# Terraform owns each service's configuration; `gcloud run deploy --image` only rolls a new
+# revision onto it. Configuration comes from repository variables, none of them secret:
+#   GCP_PROJECT_ID     empty: every job is skipped, so the repo stays green before infra exists
+#   GCP_REGION         e.g. us-west1
+#   GCP_WIF_PROVIDER   terraform/bootstrap output workload_identity_provider
+#   GCP_DEPLOYER_SA    terraform/bootstrap output deployer_service_account
+#   STAGING_URL        e.g. https://vc-staging-app-123456789.us-west1.run.app
+#   PROD_URL           e.g. https://vocal.example.com
+#
+# Only main deploys: the build job checks it, and the deploy identity accepts no other ref.
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Ships main's head without waiting for CI, e.g. to redeploy.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROJECT: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  # The commit CI passed, or main's head for a manual run.
+  SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/vc/app:${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  build:
+    # The branches filter also matches a pull request whose head branch is named main, a fork's
+    # included, so a CI run counts only when it ran for a push.
+    if: >-
+      vars.GCP_PROJECT_ID != '' && (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+        (github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.event == 'push' &&
+         github.event.workflow_run.head_branch == 'main')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # A lock per job, not per workflow: a run waiting for its production approval holds back only
+    # later production rollouts, never a newer commit's build or staging rollout. No job is cancelled
+    # halfway; a newer waiting job replaces an older one.
+    concurrency:
+      group: deploy-build
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.SHA }}
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+      - run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - run: docker build --build-arg RELEASE="$SHA" --tag "$IMAGE" .
+      - run: docker push "$IMAGE"
+
+  staging:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SERVICE: vc-staging-app
+      APP_URL: ${{ vars.STAGING_URL }}
+    steps: &rollout
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+      # CI runs can finish out of order, and an old run can be re-run, so this commit may arrive
+      # after a newer one is already serving. Rolling it out then would move the environment back.
+      - name: gcloud run deploy
+        id: deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          : "${APP_URL:?set the STAGING_URL or PROD_URL repository variable}"
+          serving=$(curl -fsS --max-time 10 "$APP_URL/api/health" | jq -r .release) || serving=""
+          if [ "$serving" != "$SHA" ] &&
+            [ "$(gh api "repos/$GITHUB_REPOSITORY/compare/$SHA...$serving" --jq .status 2>/dev/null)" = ahead ]; then
+            echo "::notice::$APP_URL already serves $serving, which includes $SHA; not rolling back"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          gcloud run deploy "$SERVICE" --image "$IMAGE" --project "$PROJECT" --region "$REGION" --quiet
+      # Ready alone is not enough: until traffic has moved, the old revision also answers ready.
+      # /api/health names the release, so the check passes only once this commit is serving.
+      - name: Smoke test
+        if: steps.deploy.outputs.skipped != 'true'
+        run: |
+          for attempt in $(seq 1 12); do
+            if curl -fsS --max-time 10 "$APP_URL/api/ready" >/dev/null; then
+              release=$(curl -fsS --max-time 10 "$APP_URL/api/health" | jq -r .release) || release=""
+              if [ "$release" = "$SHA" ]; then
+                echo "$APP_URL is serving $SHA"
+                exit 0
+              fi
+              echo "attempt $attempt: ready, but serving release '$release'"
+            else
+              echo "attempt $attempt: not ready"
+            fi
+            sleep 10
+          done
+          echo "::error::$APP_URL never served $SHA"
+          exit 1
+
+  production:
+    needs: staging
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SERVICE: vc-prod-app
+      APP_URL: ${{ vars.PROD_URL }}
+    steps: *rollout

@@ -1,0 +1,19 @@
+# Keep the build context small and free of local state and secrets. The Dockerfile copies
+# explicit paths; this list only decides what is sent to the builder.
+.git
+.github
+.claude
+node_modules
+dist
+tsconfig.tsbuildinfo
+terraform
+docs
+tests
+server/.venv
+server/tests
+**/.env
+**/*.db
+**/*.log
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache

@@ -1,0 +1,123 @@
+# CI: every pull request and every push to main. A push to main that passes starts deploy.yml,
+# which finds this workflow by its name, CI.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to a pull request supersedes its running checks. head_ref is empty outside pull
+# requests, so every commit on main gets a group, and a result, of its own.
+concurrency:
+  group: ci-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: server/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+
+  server-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vocal
+          POSTGRES_PASSWORD: vocal
+          POSTGRES_DB: vocal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready --host=127.0.0.1 --username=vocal"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: server/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      # The same command the container entrypoint runs, from an empty database.
+      - name: alembic upgrade head
+        env:
+          ENVIRONMENT: test
+          DATABASE_URL: postgresql+psycopg://vocal:vocal@localhost:5432/vocal
+        run: alembic upgrade head
+      # The suite reads TEST_DATABASE_URL, not DATABASE_URL: tests build their own Settings.
+      - name: pytest on Postgres
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://vocal:vocal@localhost:5432/vocal
+        run: python -m pytest -q
+
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
+        with:
+          terraform_version: 1.14.8
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive
+      # Every root and module: validate it, then run its tests/ against mocked providers, which need
+      # no credentials. The plugin cache downloads each provider once for all of them.
+      - name: terraform validate and test
+        env:
+          TF_PLUGIN_CACHE_DIR: ${{ runner.temp }}/terraform-plugins
+        run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          for dir in bootstrap envs/*/ modules/*/; do
+            echo "::group::$dir"
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+            terraform -chdir="$dir" test
+            echo "::endgroup::"
+          done
+
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: docker build --build-arg RELEASE="$GITHUB_SHA" --tag vc-app:ci .
