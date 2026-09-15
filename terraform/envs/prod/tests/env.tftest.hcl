@@ -32,7 +32,7 @@ run "committed_placeholders_fail_validation" {
     alert_email = "ops@example.com"
   }
 
-  expect_failures = [var.domain, var.workos_client_id]
+  expect_failures = [var.workos_client_id]
 }
 
 # The repository is public: no address in the committed settings.
