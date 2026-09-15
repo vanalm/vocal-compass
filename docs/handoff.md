@@ -23,22 +23,25 @@ docker compose up --build      # the production image + Postgres on http://local
   Postgres 16, `mypy --strict`, Terraform `validate` + `test` in every root,
   actionlint, and an image build with a compose smoke test (sign-in and a
   two-device sync round trip).
-- **Google Cloud:** project `vocal-compass` exists with billing linked. The
-  Terraform bootstrap is planned but not applied; `terraform/README.md` is the
-  runbook.
+- **Google Cloud:** project `vocal-compass` exists with billing linked, and
+  the Terraform bootstrap is applied (state bucket, registry with the first
+  image, deploy identity, empty WorkOS API key secrets). Staging and prod are
+  initialized against the bucket but not applied. The GitHub Environment
+  `production` exists with a required reviewer; the repo variables are not
+  set yet. `terraform/README.md` is the runbook.
 
 ## To go live, in order
 
 1. **WorkOS:** in your WorkOS account, add a Vocal Compass project with
    staging and production environments, set each redirect and sign-out URL,
-   and put the client IDs into `terraform/envs/*/*.auto.tfvars`.
-2. **Values:** `domain` in `envs/prod/prod.auto.tfvars` (`""` serves prod on
-   its `run.app` URL until a domain is chosen); `alert_email` in each env's
-   gitignored `terraform.tfvars` (never committed — the repo is public).
-3. **Apply** per `terraform/README.md`: bootstrap → WorkOS API keys into Secret
-   Manager → first image → staging, then prod → with a domain, a Cloudflare
-   DNS-only A record → GitHub Environment `production` with reviewers, then the
-   repo variables.
+   and put the client IDs into `terraform/envs/*/*.auto.tfvars`. Add each
+   environment's API key to Secret Manager (`terraform/README.md`, step 2).
+2. **Apply** staging, then prod (`terraform/README.md`, step 4). Prod serves
+   on its `run.app` URL until `domain` is set in `envs/prod/prod.auto.tfvars`,
+   which adds the load balancer and needs a Cloudflare DNS-only A record.
+3. **GitHub:** set the repo variables from the Terraform outputs
+   (`terraform/README.md`, step 7). From then on, a push that passes CI
+   deploys to staging and waits for your approval before prod.
 
 ## Open items, in priority order
 
