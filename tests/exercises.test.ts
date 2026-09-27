@@ -12,6 +12,18 @@ describe("cue policy: only the tones the task needs", () => {
     }
   });
 
+  it("only Tonal north shows the key map, and it names where you are and the target", () => {
+    for (const exercise of exercises.all()) {
+      const trial = exercise.createTrial({ difficulty: "steps", delayMs: 0 });
+      expect(Boolean(exercise.cuePlan(trial).showKeyMap)).toBe(exercise.id === "tonal");
+    }
+    const tonal = exercises.get("tonal");
+    const trial = tonal.createTrial({ difficulty: "steps", delayMs: 0, random: () => 0.6 });
+    const plan = tonal.cuePlan(trial);
+    expect(plan.cueLabels[1]).toMatch(/^You're here · \w+ \(\d\)$/);
+    expect(plan.prompt).toMatch(/^You're on \w+ \(\d\)\. Sing \w+ \(\d\): find it from home\.$/);
+  });
+
   it.each(IDS)("%s labels every tone it plays", (id) => {
     const exercise = exercises.get(id);
     const plan = exercise.cuePlan(exercise.createTrial({ difficulty: "steps", delayMs: 0 }));

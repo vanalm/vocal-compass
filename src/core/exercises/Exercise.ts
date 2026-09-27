@@ -21,6 +21,8 @@ export interface CuePlan {
   revealTarget: boolean;
   /** The instruction on screen for the whole trial. */
   prompt: string;
+  /** Whether the trial shows the key map (home, where you are, the target). Only a module whose task is the key sets it. */
+  showKeyMap?: boolean;
 }
 
 /** One claim about the brain, with the study it rests on. */

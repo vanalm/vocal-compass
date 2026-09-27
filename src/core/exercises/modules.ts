@@ -1,8 +1,6 @@
-import { KEYS, MAJOR_SCALE, diatonicMidi } from "../music/theory";
+import { KEYS, MAJOR_SCALE, SOLFEGE, diatonicMidi } from "../music/theory";
 import type { FeedbackMode, TrialDefinition } from "../types";
 import { Exercise, type CuePlan, type ExerciseGuide, type TrialRequest } from "./Exercise";
-
-const SOLFEGE = ["do", "re", "mi", "fa", "sol", "la", "ti"];
 
 /** Hear one target, sing it back — isolates pure landing (PRD §9.1). */
 export class DirectEcho extends Exercise {
@@ -218,17 +216,17 @@ export class SilentMap extends Exercise {
 export class TonalNorth extends Exercise {
   readonly id = "tonal";
   readonly title = "Tonal north";
-  readonly subtitle = "Find a named scale degree from the key alone. Trains navigating by key instead of by the last note.";
+  readonly subtitle = "Find a note by its place in the key, not from the last note you heard. Trains navigating by key.";
   readonly measures = "Scale-location confusion and independent navigation";
   readonly defaultFeedback: FeedbackMode = "commit";
 
   readonly guide: ExerciseGuide = {
-    task: "Hear the key and your current note, then sing the scale degree the screen names.",
+    task: "The app sets a key and puts you on one of its notes; sing the note the screen names, finding it by its place in the key.",
     steps: [
-      "The screen names a target degree, for example degree 3 (mi). It stays on screen for the whole trial.",
+      "Look at the key map. It marks three notes: Home (do, where the key comes to rest), You're here (your starting note) and Sing this (the target).",
       "A chord plays. That chord is home: it sets the key.",
-      "Two single tones follow: the home note (degree 1, do), then your current note.",
-      "Your current note plays once more. Then sing the named degree, counting from home rather than from the last note you heard.",
+      "Two single tones follow: home (do), then the note you're on.",
+      "The note you're on plays once more, then it's your turn. Hear home in your head and find the target by its place in the key: count its steps from do on the map, rather than sliding over from the last note you heard.",
     ],
     skill: "Navigating by key",
     trains:
@@ -255,7 +253,8 @@ export class TonalNorth extends Exercise {
       },
     ],
     tips: [
-      "Degrees: 1 do · 2 re · 3 mi · 4 fa · 5 sol · 6 la · 7 ti. If you need to, count silently up or down from home.",
+      "Example: you're on sol and the target is mi. Hear do, climb do–re–mi in your head, and sing that mi, even though sol was the last note you heard.",
+      "Degrees: 1 do · 2 re · 3 mi · 4 fa · 5 sol · 6 la · 7 ti. The map shows whether the target sits above or below you.",
       "Accuracy first. Speed comes once the map is solid.",
     ],
   };
@@ -266,14 +265,17 @@ export class TonalNorth extends Exercise {
   }
 
   cuePlan(trial: TrialDefinition): CuePlan {
+    const here = `${SOLFEGE[trial.startDegree]} (${trial.startDegree + 1})`;
+    const target = `${SOLFEGE[trial.targetDegree]} (${trial.targetDegree + 1})`;
     return {
       playCadence: true, // the key IS this exercise: the chord is the map being navigated
       contextMidis: [trial.tonicMidi, trial.startMidi],
-      cueLabels: ["Home · do", "Current note"],
+      cueLabels: ["Home · do (1)", `You're here · ${here}`],
       playStartAtGo: true,
-      goLabel: "Current note again",
+      goLabel: `You're here · ${here}. Now sing ${SOLFEGE[trial.targetDegree]}.`,
       revealTarget: false,
-      prompt: `Sing degree ${trial.targetDegree + 1} (${SOLFEGE[trial.targetDegree]}), counting from home.`,
+      showKeyMap: true,
+      prompt: `You're on ${here}. Sing ${target}: find it from home.`,
     };
   }
 }

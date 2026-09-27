@@ -13,7 +13,8 @@ import {
 import { useTrialRunner, type RunnerSettings } from "../hooks/useTrialRunner";
 import { PitchReadout } from "../components/PitchReadout";
 import { CueIndicator, FlowModeToggle, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
-import { TraceChart } from "../components/TraceChart";
+import { KeyMap } from "../components/KeyMap";
+import { TrialSummary, fromSession } from "../components/TrialSummary";
 import { ExerciseInfoModal, InfoButton } from "../components/ExerciseInfo";
 import { NoiseWarning } from "../components/NoiseWarning";
 
@@ -52,6 +53,7 @@ export function LabScreen({
   const runner = useTrialRunner(save);
   const exercise = exercises.get(settings.exerciseId);
   const trial = runner.session?.definition ?? null;
+  const showMap = trial ? Boolean(exercises.get(trial.exerciseId).cuePlan(trial).showKeyMap) : false;
   const showLive = settings.feedbackMode === "live" && runner.phase === "sing";
 
   const begin = () => {
@@ -191,6 +193,7 @@ export function LabScreen({
             <h3>Listen</h3>
             <p>Key of {trial?.keyName}.</p>
             <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? undefined} />
+            {showMap && trial && <KeyMap trial={trial} />}
           </div>
         )}
 
@@ -199,6 +202,7 @@ export function LabScreen({
             <h3>Imagine</h3>
             <p>{runner.prompt}</p>
             <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? undefined} />
+            {showMap && trial && <KeyMap trial={trial} />}
             {runner.remainingDelayMs > 0 ? (
               <p className="vc-small" style={{ marginTop: 12 }}>
                 Hold it silently… {(runner.remainingDelayMs / 1000).toFixed(1)} s
@@ -223,6 +227,7 @@ export function LabScreen({
           <div className="vc-prompt vc-stage-prompt sing">
             <h3>Sing</h3>
             <p>Commit to one note. Capture stops automatically.</p>
+            {showMap && <KeyMap trial={trial} />}
             <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
             <NoiseWarning noisy={runner.tooNoisy} />
             {showLive && <PitchReadout sample={runner.liveSample} targetMidi={trial.targetMidi} />}
@@ -287,7 +292,8 @@ export function LabScreen({
               </div>
             </div>
             <p className="vc-explanation">{runner.analysis.explanation}</p>
-            <TraceChart record={{ trace: runner.session.trace, definition: runner.session.definition }} />
+            {showMap && trial && <KeyMap trial={trial} sungMidi={runner.analysis.selectedMidi} />}
+            <TrialSummary record={fromSession(runner.session)} />
 
             {runner.session.needsIntentConfirmation() && (
               <div className="vc-intent">

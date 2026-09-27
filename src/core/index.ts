@@ -28,7 +28,7 @@ export type {
   RealizedNote,
   RealizedPhrase,
 } from "./phrase/realize";
-export { extractSungNotes, scorePhrase } from "./phrase/PhraseScorer";
+export { extractSungNotes, noteRuns, scorePhrase } from "./phrase/PhraseScorer";
 export type { NoteResult, PhraseScore, SungNote } from "./phrase/PhraseScorer";
 export { phraseLibrary } from "./phrase/library";
 export { phraseProgress } from "./phrase/progression";
@@ -51,6 +51,8 @@ export type { PitchFrame, NoiseState, PipelineOptions } from "./pitch/PitchPipel
 export { NoiseFloorTracker } from "./pitch/NoiseFloorTracker";
 export type { NoiseFloorOptions } from "./pitch/NoiseFloorTracker";
 export { segmentTrace } from "./trial/segmentTrace";
+export { summarizeTrial } from "./trial/trialSummary";
+export type { Steadiness, TrialNote, TrialSummary } from "./trial/trialSummary";
 export { heldExtremes } from "./pitch/RangeAnalyzer";
 export { RangeWalk, RANGE_WALK_DEFAULTS } from "./pitch/RangeWalk";
 export type {

@@ -70,6 +70,7 @@ DOM assumptions — and every seam is an interface or abstract class:
 | `exercises/Exercise.ts` | Abstract training module: trial generation + cue plan + default feedback policy | Subclass + one `register()` call in `registry.ts` |
 | `trial/TrialSession.ts` | State machine for one attempt (listen → imagine → sing → review); owns timing, trace, rescue | — |
 | `trial/AttemptClassifier.ts` | Separates destination selection from landing; injectable thresholds for device calibration | Pass custom `ClassifierThresholds` |
+| `trial/trialSummary.ts` | The per-trial dashboard's numbers: each note sung and how far off its center, pitch and volume steadiness, time to first sound, voiced share | — |
 | `trial/RescueLadder.ts` | Graded "I'm lost" hints; records the minimum support needed | — |
 | `pitch/PitchDetector.ts` | Estimator seam; shipped default is `MpmDetector` (McLeod, via pitchy), with the dependency-free `AutocorrelationDetector` as fallback | Implement `PitchDetector` |
 | `pitch/PitchSmoother.ts` | Streaming spike suppressor: clarity gate + one-frame confirmation for large jumps; never bends values, so real octave leaps survive | Pass custom `SmootherOptions` |

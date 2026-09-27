@@ -35,6 +35,33 @@ describe("TrialSession state machine", () => {
     expect(record.lostEvent).toBe(false);
   });
 
+  it("keeps the go-signal, every frame's level (voiced or not), and the mic it was sung on", () => {
+    const now = { t: 1000 };
+    const session = makeSession(now);
+    session.micLowCut = "80";
+    session.micInput = "USB mic";
+    session.beginListening();
+    session.beginImagining();
+    session.addFrame({ raw: null, smoothed: null, level: 0.5 }); // before the go: not part of the attempt
+    now.t = 2000;
+    session.beginSinging();
+    now.t = 2070;
+    session.addFrame({ raw: null, smoothed: null, level: 0.0012345 });
+    now.t = 2140;
+    const sung = voicedSample(session.definition.targetMidi, 2140);
+    session.addFrame({ raw: sung, smoothed: sung, level: 0.05 });
+    for (let i = 1; i < 6; i += 1) session.addSample(voicedSample(session.definition.targetMidi, 2140 + i * 70));
+    session.finishSinging();
+    const record = session.toRecord();
+    expect(record.goAt).toBe(2000);
+    expect(record.levels).toEqual([
+      { t: 2070, rms: 0.00123 },
+      { t: 2140, rms: 0.05 },
+    ]);
+    expect(record.micLowCut).toBe("80");
+    expect(record.micInput).toBe("USB mic");
+  });
+
   it("rejects out-of-order transitions", () => {
     const session = makeSession({ t: 0 });
     expect(() => session.beginSinging()).toThrow();

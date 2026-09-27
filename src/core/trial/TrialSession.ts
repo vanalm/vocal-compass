@@ -3,6 +3,7 @@ import type {
   ErrorKind,
   FeedbackMode,
   IntentLabel,
+  LowCutSetting,
   PitchSample,
   RegisterLabel,
   TrialDefinition,
@@ -24,6 +25,7 @@ export type TrialPhase = "ready" | "listen" | "imagine" | "sing" | "review";
 export class TrialSession {
   private phase: TrialPhase = "ready";
   private samples: PitchSample[] = [];
+  private levels: Array<{ t: number; rms: number }> = [];
   private goAt: number | null = null;
   private firstVoicedAt: number | null = null;
   private analysis: AttemptAnalysis | null = null;
@@ -32,6 +34,9 @@ export class TrialSession {
   confidenceBefore = 3;
   effort = 2;
   register: RegisterLabel = "unknown";
+  /** Recorded with the trial, as the microphone reports them. */
+  micLowCut: LowCutSetting | undefined;
+  micInput: string | null = null;
 
   constructor(
     readonly definition: TrialDefinition,
@@ -51,6 +56,20 @@ export class TrialSession {
   /** Captured pitch trace, for review visualisations. */
   get trace(): Array<{ t: number; midi: number; clarity: number; rms?: number }> {
     return this.samples.map((s) => ({ t: s.at, midi: s.midi, clarity: s.clarity, rms: s.rms }));
+  }
+
+  /** Input level of every sing-window frame, voiced or not. */
+  get levelTrace(): Array<{ t: number; rms: number }> {
+    return [...this.levels];
+  }
+
+  get goSignalAt(): number | null {
+    return this.goAt;
+  }
+
+  /** Go-signal to first voicing: the selection-latency KPI. */
+  get selectionLatencyMs(): number | null {
+    return this.goAt != null && this.firstVoicedAt != null ? Math.max(0, this.firstVoicedAt - this.goAt) : null;
   }
 
   /** Live pitch is only shown to the user when the mode allows it. */
@@ -80,9 +99,10 @@ export class TrialSession {
    * latency KPI must not pay the smoother's confirmation delay); smoothed is
    * what the trace and classifier see.
    */
-  addFrame(frame: { raw: PitchSample | null; smoothed: PitchSample | null }): void {
+  addFrame(frame: { raw: PitchSample | null; smoothed: PitchSample | null; level?: number }): void {
     if (this.phase !== "sing") return;
-    const { raw, smoothed } = frame;
+    const { raw, smoothed, level } = frame;
+    if (level !== undefined) this.levels.push({ t: this.now(), rms: Number(level.toFixed(5)) });
     if (raw && this.firstVoicedAt == null && raw.clarity >= 0.5 && raw.rms >= 0.008) {
       this.firstVoicedAt = raw.at;
     }
@@ -141,15 +161,16 @@ export class TrialSession {
       lostEvent: this.rescue.isLost,
       intent: this.intent,
       finalErrorKind: this.finalErrorKind(),
-      selectionLatencyMs:
-        this.goAt != null && this.firstVoicedAt != null
-          ? Math.max(0, this.firstVoicedAt - this.goAt)
-          : null,
+      selectionLatencyMs: this.selectionLatencyMs,
       recoveryTimeMs: this.rescue.recoveryTime(commitAt),
       confidenceBefore: this.confidenceBefore,
       effort: this.effort,
       register: this.register,
       trace: this.trace,
+      goAt: this.goAt,
+      levels: this.levelTrace,
+      micLowCut: this.micLowCut,
+      micInput: this.micInput,
       createdAt: new Date().toISOString(),
     };
   }

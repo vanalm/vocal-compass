@@ -45,23 +45,18 @@ const RUN_GAP_MS = 150;
 const HIT_PITCH_TOL_ST = 0.75;
 const LATE_THRESHOLD_MS = 150;
 
-/** Group held frames into sung note events; blips and gaps break runs. */
-export function extractSungNotes(samples: PitchSample[]): SungNote[] {
+/**
+ * Group held frames into runs, one per sung note: a gap or a jump away from
+ * the run's median pitch starts a new run, and runs too short to be a note
+ * (blips, slides) are dropped. Shared by phrase scoring and trial summaries.
+ */
+export function noteRuns<T extends { at: number; midi: number }>(samples: T[]): T[][] {
   const sorted = [...samples].sort((a, b) => a.at - b.at);
-  const notes: SungNote[] = [];
-  let run: PitchSample[] = [];
+  const runs: T[][] = [];
+  let run: T[] = [];
 
   const flush = () => {
-    if (run.length >= RUN_MIN_FRAMES) {
-      const mid = median(run.map((s) => s.midi));
-      if (mid != null) {
-        notes.push({
-          midi: mid,
-          onsetMs: run[0].at,
-          durationMs: run[run.length - 1].at - run[0].at + FRAME_MS,
-        });
-      }
-    }
+    if (run.length >= RUN_MIN_FRAMES) runs.push(run);
     run = [];
   };
 
@@ -76,7 +71,16 @@ export function extractSungNotes(samples: PitchSample[]): SungNote[] {
     run.push(sample);
   }
   flush();
-  return notes;
+  return runs;
+}
+
+/** Sung note events: each run's median pitch, onset and length. */
+export function extractSungNotes(samples: PitchSample[]): SungNote[] {
+  return noteRuns(samples).map((run) => ({
+    midi: median(run.map((s) => s.midi)) as number,
+    onsetMs: run[0].at,
+    durationMs: run[run.length - 1].at - run[0].at + FRAME_MS,
+  }));
 }
 
 export function scorePhrase(targets: RealizedNote[], samples: PitchSample[]): PhraseScore {

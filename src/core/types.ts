@@ -81,6 +81,14 @@ export interface TrialRecord extends AttemptAnalysis {
   effort: number;
   register: RegisterLabel;
   trace: Array<{ t: number; midi: number; clarity: number; rms?: number }>;
+  /** Client-clock ms of the go-signal, on the trace's clock. Absent on records made before it was kept. */
+  goAt?: number | null;
+  /** Input level of every frame in the sing window, voiced or not: breaks and dropouts show here. */
+  levels?: Array<{ t: number; rms: number }>;
+  /** The low-cut filter active while singing, as on range measurements. */
+  micLowCut?: LowCutSetting;
+  /** The input's name, so results from different mics can be told apart. */
+  micInput?: string | null;
   createdAt: string;
 }
 

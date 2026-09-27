@@ -1,6 +1,8 @@
 /** Pitch math and key/scale vocabulary. Pure functions, fully testable. */
 
 export const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+/** Movable-do names of the major scale's degrees, 1 through 7. */
+export const SOLFEGE = ["do", "re", "mi", "fa", "sol", "la", "ti"] as const;
 
 export const NOTE_NAMES = [
   "C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B",

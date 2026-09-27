@@ -125,6 +125,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
       });
       const session = new TrialSession(trial, settings.feedbackMode);
       session.confidenceBefore = confidence;
+      session.micLowCut = microphone.lowCutSetting;
       sessionRef.current = session;
       const plan = exercise.cuePlan(trial);
       planRef.current = plan;
@@ -216,6 +217,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     const run = runRef.current;
     await microphone.start();
     if (runRef.current !== run) return;
+    session.micInput = microphone.inputLabel;
     if (plan.playStartAtGo) {
       setCuePlaying(true);
       setCueLabel(plan.goLabel ?? null);

@@ -8,7 +8,8 @@ import {
 } from "../../core";
 import { useTrialRunner } from "../hooks/useTrialRunner";
 import { CueIndicator, MicMeter, useSpacebarAdvance } from "../components/TrialStage";
-import { TraceChart } from "../components/TraceChart";
+import { KeyMap } from "../components/KeyMap";
+import { TrialSummary, fromSession } from "../components/TrialSummary";
 import { ExerciseInfoModal, GuideBrief, InfoButton } from "../components/ExerciseInfo";
 import { NoiseWarning } from "../components/NoiseWarning";
 
@@ -145,6 +146,7 @@ export function TestScreen({
       ? `Start ${nextExercise.title} →`
       : "Next trial →";
   const analysis = runner.analysis;
+  const showMap = trial ? Boolean(exercises.get(trial.exerciseId).cuePlan(trial).showKeyMap) : false;
 
   return (
     <>
@@ -205,6 +207,7 @@ export function TestScreen({
               <h3>Listen</h3>
               <p>{runner.prompt}</p>
               <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? "Listening…"} />
+              {showMap && trial && <KeyMap trial={trial} />}
             </div>
           )}
 
@@ -213,6 +216,7 @@ export function TestScreen({
               <h3>{runner.cuePlaying ? "Listen" : trial.delayMs > 0 ? "Hold it" : "Get ready"}</h3>
               <p>{runner.prompt}</p>
               <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? "Listening…"} />
+              {showMap && trial && <KeyMap trial={trial} />}
               {trial.delayMs > 0 && !runner.cuePlaying && (
                 <>
                   <div className="vc-countdown" aria-hidden="true">
@@ -230,6 +234,7 @@ export function TestScreen({
             <div className="vc-prompt vc-phase-block">
               <h3 className="vc-sing-now">Sing</h3>
               <p>{runner.prompt}</p>
+              {showMap && <KeyMap trial={trial} />}
               <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
               <p className="vc-small">One note, held steady. Recording stops on its own (space ends it early).</p>
             </div>
@@ -256,6 +261,8 @@ export function TestScreen({
                 </div>
               </div>
               <p className="vc-explanation">{analysis.explanation}</p>
+              {showMap && trial && <KeyMap trial={trial} sungMidi={analysis.selectedMidi} />}
+              <TrialSummary record={fromSession(runner.session)} />
 
               {nextStep && nextExercise && (
                 <div className="vc-upnext">
@@ -274,7 +281,6 @@ export function TestScreen({
                   Retry (this one won’t count)
                 </button>
               </div>
-              <TraceChart record={{ trace: runner.session.trace, definition: runner.session.definition }} />
             </div>
           )}
         </section>
