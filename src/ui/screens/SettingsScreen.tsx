@@ -4,15 +4,34 @@ import { useMicLowCut } from "../hooks/micLowCut";
 import type { Account } from "../hooks/useAccount";
 import { AccountSettings } from "../components/AccountSettings";
 import { FlowModeToggle } from "../components/TrialStage";
+import { loadMicCheck } from "../micCheckStore";
 
 /** The account, and preferences for how the app listens and paces, saved in this browser. */
-export function SettingsScreen({ account }: { account: Account }) {
+export function SettingsScreen({ account, onCheckMic }: { account: Account; onCheckMic: () => void }) {
   const [lowCut, setLowCut] = useMicLowCut();
   const [flowMode, setFlowMode] = useFlowMode();
+  const micCheck = loadMicCheck();
 
   return (
     <div className="vc-grid">
       <AccountSettings account={account} />
+
+      <section className="vc-card vc-card-pad" style={{ gridColumn: "span 12" }}>
+        <div className="vc-section-title">
+          <h3>Microphone</h3>
+        </div>
+        <p className="vc-small">
+          {micCheck
+            ? `Heard you through ${micCheck.label ?? "the system default input"} on ${new Date(micCheck.at).toLocaleDateString()}.`
+            : "Not checked in this browser yet."}{" "}
+          Run the check when you change mics or the app stops hearing you.
+        </p>
+        <div className="vc-actions">
+          <button type="button" className="vc-button" onClick={onCheckMic}>
+            Check microphone
+          </button>
+        </div>
+      </section>
 
       <section className="vc-card vc-card-pad" style={{ gridColumn: "span 12" }}>
         <div className="vc-section-title">

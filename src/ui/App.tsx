@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ServicesProvider } from "./services";
 import { useAccount } from "./hooks/useAccount";
 import { useTrials } from "./hooks/useTrials";
 import { AccountChip } from "./components/AccountChip";
+import { MicCheckDialog } from "./components/MicCheck";
+import { micCheckNeeded } from "./micCheckStore";
 import { TodayScreen } from "./screens/TodayScreen";
 import { LabScreen } from "./screens/LabScreen";
 import { ProgressScreen } from "./screens/ProgressScreen";
@@ -20,6 +22,15 @@ function Shell() {
   const account = useAccount({ onPulled: () => refresh() });
   // Back from signing in, which starts on Settings: open there again, where the account card also explains a failure.
   const [screen, setScreen] = useState<Screen>(account.returningFromSignIn ? "settings" : "today");
+  // Every exercise depends on the microphone, so the app checks it at startup until it has heard you once.
+  const [checkingMic, setCheckingMic] = useState(false);
+  useEffect(() => {
+    let open = true;
+    void micCheckNeeded().then((needed) => open && setCheckingMic(needed));
+    return () => {
+      open = false;
+    };
+  }, []);
 
   const {
     trials,
@@ -100,7 +111,7 @@ function Shell() {
           <RangeScreen ranges={ranges} onSaveRange={saveRange} onSaveSession={saveSession} />
         )}
         {screen === "protocol" && <ProtocolScreen />}
-        {screen === "settings" && <SettingsScreen account={account} />}
+        {screen === "settings" && <SettingsScreen account={account} onCheckMic={() => setCheckingMic(true)} />}
       </div>
 
       <nav className="vc-nav" aria-label="Primary">
@@ -110,6 +121,8 @@ function Shell() {
           </button>
         ))}
       </nav>
+
+      {checkingMic && <MicCheckDialog onClose={() => setCheckingMic(false)} />}
     </div>
   );
 }

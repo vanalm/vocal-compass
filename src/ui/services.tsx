@@ -12,6 +12,7 @@ import {
   type TrialRepository,
 } from "../core";
 import { loadChoice } from "./hooks/persistentChoice";
+import { loadMicDevice } from "./micCheckStore";
 
 /** Where the microphone low-cut preference is saved, and its valid values. */
 export const MIC_LOW_CUT_KEY = "vc-mic-low-cut";
@@ -39,6 +40,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
       : new MemoryTrialRepository();
     const microphone = new MicrophoneEngine();
     microphone.setLowCut(loadChoice(MIC_LOW_CUT_KEY, MIC_LOW_CUT_IDS, DEFAULT_LOW_CUT));
+    microphone.setInputDevice(loadMicDevice());
     return {
       repository,
       microphone,

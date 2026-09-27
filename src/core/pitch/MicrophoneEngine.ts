@@ -1,4 +1,5 @@
 import { DEFAULT_LOW_CUT, applyLowCut, type LowCutSetting } from "./micFilter";
+import { describeMicError } from "./micInput";
 import { PitchPipeline, type PitchFrame } from "./PitchPipeline";
 
 export type MicStatus = "idle" | "requesting" | "live" | "error";
@@ -8,11 +9,25 @@ export interface MicListener {
   onStatus?(status: MicStatus, error?: string): void;
 }
 
+/** An audio input the browser offers; labels stay empty until microphone permission is granted. */
+export interface MicInput {
+  id: string;
+  label: string;
+}
+
 declare global {
   interface Window {
     webkitAudioContext?: typeof AudioContext;
   }
 }
+
+/** Raw voice: the browser's call-audio processing would flatten the very pitch being measured. */
+const CAPTURE: MediaTrackConstraints = {
+  echoCancellation: false,
+  noiseSuppression: false,
+  autoGainControl: false,
+  channelCount: 1,
+};
 
 /**
  * Owns the getUserMedia/AudioContext lifecycle and pushes PitchFrames to
@@ -27,11 +42,19 @@ export class MicrophoneEngine {
   private _status: MicStatus = "idle";
   private lowCut: LowCutSetting = DEFAULT_LOW_CUT;
   private filter: BiquadFilterNode | null = null;
+  private deviceId: string | null = null;
+  private _inputLabel: string | null = null;
 
   constructor(
     private readonly pipeline: PitchPipeline = new PitchPipeline(),
     private readonly pollMs = 70,
   ) {}
+
+  /** Audio inputs the browser can name. */
+  static async listInputs(): Promise<MicInput[]> {
+    const devices = (await navigator.mediaDevices?.enumerateDevices?.()) ?? [];
+    return devices.filter((d) => d.kind === "audioinput").map((d) => ({ id: d.deviceId, label: d.label }));
+  }
 
   get status(): MicStatus {
     return this._status;
@@ -41,10 +64,25 @@ export class MicrophoneEngine {
     return this.lowCut;
   }
 
+  /** The chosen input; null means the system default. */
+  get inputDevice(): string | null {
+    return this.deviceId;
+  }
+
+  /** The name of the input capture is running on, while live. */
+  get inputLabel(): string | null {
+    return this._inputLabel;
+  }
+
   /** Retunes live capture immediately and applies to every later start. */
   setLowCut(setting: LowCutSetting): void {
     this.lowCut = setting;
     if (this.filter) applyLowCut(this.filter, setting);
+  }
+
+  /** Takes effect at the next start. */
+  setInputDevice(deviceId: string | null): void {
+    this.deviceId = deviceId;
   }
 
   subscribe(listener: MicListener): () => void {
@@ -59,26 +97,31 @@ export class MicrophoneEngine {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("This browser does not expose microphone capture.");
       }
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          channelCount: 1,
-        },
-      });
       const Ctor = window.AudioContext || window.webkitAudioContext;
       if (!Ctor) throw new Error("Web Audio is unavailable in this browser.");
-      this.context = new Ctor();
-      await this.context.resume();
+      // Created and resumed before the permission prompt, while the click that
+      // started capture still counts as a user gesture: Safari otherwise can
+      // leave the context suspended, and every frame reads as silence.
+      const context = new Ctor();
+      this.context = context;
+      void context.resume();
+      const stream = await this.openStream();
+      if (this.context !== context) {
+        // Stopped while the permission prompt was open.
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      this.stream = stream;
+      await context.resume();
+      this._inputLabel = stream.getAudioTracks()[0]?.label || null;
 
-      const source = this.context.createMediaStreamSource(this.stream);
+      const source = context.createMediaStreamSource(stream);
       // Rumble below the vocal range pollutes both the RMS gate and low-lag
       // correlation peaks, so a low-cut sits before detection.
-      const filter = this.context.createBiquadFilter();
+      const filter = context.createBiquadFilter();
       applyLowCut(filter, this.lowCut);
       this.filter = filter;
-      const analyser = this.context.createAnalyser();
+      const analyser = context.createAnalyser();
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0;
       source.connect(filter);
@@ -88,16 +131,16 @@ export class MicrophoneEngine {
       this.setStatus("live");
 
       const loop = () => {
-        if (!this.context) return;
+        if (this.context !== context) return;
         analyser.getFloatTimeDomainData(buffer);
-        const frame = this.pipeline.process(buffer, this.context.sampleRate, Date.now());
+        const frame = this.pipeline.process(buffer, context.sampleRate, Date.now());
         for (const l of this.listeners) l.onSample?.(frame);
         this.timer = window.setTimeout(loop, this.pollMs);
       };
       loop();
     } catch (reason) {
       this.stop();
-      this.setStatus("error", reason instanceof Error ? reason.message : "Microphone access failed.");
+      this.setStatus("error", describeMicError(reason));
     }
   }
 
@@ -109,8 +152,21 @@ export class MicrophoneEngine {
     void this.context?.close();
     this.context = null;
     this.filter = null;
+    this._inputLabel = null;
     this.pipeline.reset();
     if (this._status !== "error") this.setStatus("idle");
+  }
+
+  /** The chosen input, or the system default when it has been unplugged. */
+  private async openStream(): Promise<MediaStream> {
+    if (!this.deviceId) return navigator.mediaDevices.getUserMedia({ audio: CAPTURE });
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: { ...CAPTURE, deviceId: { exact: this.deviceId } } });
+    } catch (error) {
+      const name = typeof error === "object" && error !== null && "name" in error ? error.name : "";
+      if (name !== "OverconstrainedError" && name !== "NotFoundError") throw error;
+      return navigator.mediaDevices.getUserMedia({ audio: CAPTURE });
+    }
   }
 
   private setStatus(status: MicStatus, error?: string): void {
