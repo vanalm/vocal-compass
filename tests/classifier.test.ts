@@ -88,3 +88,24 @@ describe("AttemptClassifier (PRD §21.1 logic tests)", () => {
     expect(classifier.resolveFinalErrorKind(result, "selected-note")).toBe("selection");
   });
 });
+
+describe("Audit: first stable observation, not final correction or tracker jitter",()=>{
+ it("does not score three frames too short to establish a held note",()=>{
+  expect(classifier.classify({targetMidi:62,startMidi:60,samples:hold(62,0,0,3,20)}).scored).toBe(false);
+ });
+ it("does not join isolated frames across long silent gaps",()=>{
+  expect(classifier.classify({targetMidi:62,startMidi:60,samples:hold(62,0,0,3,400)}).scored).toBe(false);
+ });
+ it("preserves an early wrong stable note even when most later frames are correct",()=>{
+  const r=classifier.classify({targetMidi:64,startMidi:60,samples:[...hold(62,0,0,4),...hold(64,0,320,30)]});
+  expect(r.selectedMidi).toBe(62);expect(r.destinationMatch).toBe(false);
+ });
+ it("does not treat small oscillations across a semitone rounding boundary as repeated searching",()=>{
+  const samples=hold(62,48).map((s,i)=>({...s,midi:62.48+(i%2?.05:-.05)}));
+  expect(classifier.classify({targetMidi:62,startMidi:60,samples}).searchTransitions).toBeLessThan(2);
+ });
+ it("sorts valid frames and rejects non-finite pitch/timing",()=>{
+  const samples=[...hold(62).reverse(),{...hold(62)[0],at:NaN},{...hold(62)[0],midi:NaN}];
+  expect(classifier.classify({targetMidi:62,startMidi:60,samples}).destinationMatch).toBe(true);
+ });
+});

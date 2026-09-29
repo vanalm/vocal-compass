@@ -23,9 +23,14 @@ export class CuePlayer {
     return this.context;
   }
 
+  /** Resume on the initiating user gesture, before any permission prompt. */
+  async prepare(): Promise<void> { await this.ctx(); }
+
   /** Play one note. Returns after the note finishes. */
   async playNote(midi: number, durationMs = 700, gain = 0.16): Promise<void> {
+    const generation = this.generation;
     const ctx = await this.ctx();
+    if (generation !== this.generation) return;
     const now = ctx.currentTime;
     const seconds = durationMs / 1000;
     const osc = ctx.createOscillator();
@@ -68,7 +73,9 @@ export class CuePlayer {
 
   /** Four woodblock-ish ticks so the singer knows exactly when beat one lands. */
   async playCountIn(bpm: number, beats = 4): Promise<void> {
+    const generation = this.generation;
     const ctx = await this.ctx();
+    if (generation !== this.generation) return;
     const beatS = 60 / bpm;
     const start = ctx.currentTime + 0.05;
     for (let i = 0; i < beats; i += 1) {
@@ -84,7 +91,9 @@ export class CuePlayer {
    * pads ARE the exercise. Resolves when playback ends.
    */
   async playRealizedPhrase(realized: RealizedPhrase, guide: GuideStrength): Promise<void> {
+    const generation = this.generation;
     const ctx = await this.ctx();
+    if (generation !== this.generation) return;
     const start = ctx.currentTime + 0.06;
     const guided =
       guide === "full"
@@ -115,7 +124,9 @@ export class CuePlayer {
 
   /** A tonic chord to establish "home" (root, third, fifth). */
   async playCadence(tonicMidi: number): Promise<void> {
+    const generation = this.generation;
     const ctx = await this.ctx();
+    if (generation !== this.generation) return;
     const now = ctx.currentTime;
     for (const offset of [0, 4, 7]) {
       const osc = ctx.createOscillator();

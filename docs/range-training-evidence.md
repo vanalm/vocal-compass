@@ -1,77 +1,33 @@
-# Range measurement & training: what the evidence supports
+# Range: observed notes are not a higher belt
 
-Literature synthesis, 2026-08-28 (~59 sources reviewed; key citations below).
-This doc is the authority behind `src/core/protocol/rangePlan.ts` — change the
-code and this file together.
+**Reviewed:** 2026-09-29. This supersedes the prior range synthesis. It corrects claims rather than carrying them forward under an “evidence-based” label. Current source cards are in **Guide → Research library**.
 
-## Measurement
+## Three different outcomes
 
-- **Repeat measurements drift up ~1.4 st with no training at all** (Printz
-  2018, J Voice 32:32 — healthy adults, dual-mic voice range profile,
-  test-retest). Practice/familiarity, not vocal change.
-- **No published minimal-detectable-change exists.** Our ~3 st threshold is
-  inferred: retest drift (~1.4 st) vs the ~4±5 st gained by surgically
-  removing a vocal-fold lesion (Salmen 2017, J Voice 31:114). Sub-3 st
-  "gains" are reported as within noise. `MEANINGFUL_RANGE_CHANGE_ST`.
-- Discrete half-steps elicit better extremes than glissando (Barrett 2020,
-  J Voice 34:179, n=56) and ~10 trials with coaching saturate the measurement
-  (Ma & Li 2017). The probe implements this as turn-taking (`RangeWalk`,
-  method `guided-turns`): the app plays a note, pauses 1.2 s, then gives the
-  singer up to 5 s to find it and hold it for 0.5 s, one semitone per step —
-  starting note → floor → ceiling. Nothing is judged while the note sounds, so
-  the reference and the voice never overlap. Frames are judged unsmoothed so
-  breathy-but-steady edge notes still count; the 0.5 s hold is the spike
-  filter. A miss never advances on its own — the singer chooses to retry or
-  call the limit. Every attempt is stored with timing, cents, and wrong-octave
-  flags. Measurements record their `method`; comparisons across methods
-  (earlier glissando and first guided-steps probes) are flagged, not silently
-  mixed.
-- A phone cannot do a true voice range profile (frequency × calibrated dB);
-  we honestly report semitones only. Same device + same method across
-  measurements is the policy that matters (Printz 2017, JSLHR 60:3369).
+1. **Pitch matching:** reproducing requested frequencies within an already comfortable span.
+2. **Detected span:** low and high notes captured under a particular measurement method and microphone setup.
+3. **Usable technique:** easy, repeatable singing in a desired style, register, vowel, phrase and dynamic.
 
-## Training — what actually has evidence
+The microphone can inform the first two. It cannot establish the third, detect all strain, or certify safety.
 
-- **Vocal Function Exercises (Stemple) are the program.** Stemple 1994
-  (RCT vs placebo + control, 4 weeks: frequency range improved); Guzman 2020
-  (JSLHR 63:1044, RCT n=40 graduate opera students, 10 weeks: voice-range-
-  profile area expanded vs hygiene-only). Systematic review: Angadi 2019
-  (J Voice 33:124, effects −0.59 to 1.55, no adverse outcomes in 21 studies).
-- **Dose:** twice daily, ~6 weeks, no observed toxicity; once daily was
-  insufficient (Bane 2019, IJSLP 21:37). Gains appeared by week 4 (Stemple).
-- **The semi-occluded posture is load-bearing:** VFE on open vowels lost the
-  effect (Bane 2019b, IJSLP 21:175). Lip/tongue trills produce the lowest
-  vocal-fold contact of any gesture (Guzman 2015, Folia Phoniatr 67:68) —
-  hence every step here rides a trill.
-- **SOVT alone (straw etc.) is NOT evidence for range expansion.** Physics
-  says efficiency + reduced collision (Titze 2006), the best meta-analysis
-  rates the clinical evidence "very low" with no superiority (Pozzali 2024),
-  and acute effects wash out in ~5 minutes (Echternach 2021). Trills are our
-  vehicle, not our engine.
-- **No controlled trials exist** for sirens/glides as training, register-
-  transition ("mix") training, messa di voce, or vocal cool-downs. The app
-  does not claim them.
-- Elite conservatory training *reshaped* rather than expanded the measured
-  range map over 3 years — and singers' self-assessment contradicted their
-  measurements (Pabon 2014, J Voice 28:36). Expect access/efficiency gains
-  of a few semitones, not a new voice.
+## Corrections to the previous evidence claims
 
-## Safety — structural, because software cannot hear strain
+[Printz et al. (2018)](https://doi.org/10.1016/j.jvoice.2017.03.019) reported a mean retest increase of approximately 1.4 semitones in a laboratory voice-range-profile protocol. This is **not** an individual minimum detectable change, and it does not validate a three-semitone browser threshold. Comparing it with changes after vocal-fold surgery does not establish that threshold either. `MEANINGFUL_RANGE_CHANGE_ST` is now null; comparisons are explicitly descriptive. Different or unknown methods and filter changes are flagged.
 
-- No validated acoustic marker of strain exists; worse, self-judged effort is
-  unreliable (listeners heard strain speakers didn't feel — Ford 2024).
-  Guardrails are therefore structural: per-step time caps, soft-volume
-  instruction, trills, and cadence.
-- Load spikes read as worse voice 24–72 h later; ≥48 h rest before heavy load
-  helps (Carroll 2006). Two hard days in a row is the risk pattern.
-- **Losing the top of the range is on NIDCD's warning-sign list** — the app
-  surfaces a meaningful range *loss* as a see-a-clinician signal, never as
-  "practice harder".
+[Bane et al.](https://doi.org/10.1080/17549507.2017.1373858) varied repetitions; the groups all practiced twice daily. The [author’s primary study abstract](https://uknowledge.uky.edu/commdisorders_etds/8/) makes that distinction explicit. The old claim that once-daily practice was insufficient was incorrect. Maximum phonation time was central; this does not prescribe a dose for higher singing range. The PMC full-text page was challenge-blocked during the audit; access is not represented as full-paper verification.
 
-## App-delivered training can work
+[Stemple et al. (1994)](https://pubmed.ncbi.nlm.nih.gov/7987430/) studied the original Vocal Function Exercises protocol in 35 women with normal voices. An all-trill app adaptation is not that protocol. The optional screen is now called **easy-voice exploration**, has no promised time to benefit and is not presented as a range treatment. Old saved VFE-labelled sessions remain historical records, not proof of completing a validated protocol.
 
-RCT n=399 teachers: a voice-exercise app improved the Dysphonia Severity
-Index (which embeds highest-F0) vs control in 46 days, at a realized dose of
-only ~2.4 hours total (Hauck 2025, Digital Health 11). Phone-grade F0
-measurement correlates r²≈0.8–0.98 with lab tools in non-severe voices
-(Llico 2026, J Voice 40:87).
+[Pfordresher & Greenspon (2025)](https://doi.org/10.1177/10298649241289542) tested the span of pitch-matching practice. The study does not establish physiological expansion or higher belting. The appropriate inference here is to vary notes within comfort, not chase extremes.
+
+## Measurement policy
+
+Keep method and microphone consistent; record the filter. A held pitch is an observation, not “usable range.” Repeat across days rather than celebrating a single extreme. The existing range record does not capture every confound (including a robust microphone identity, vocal effort at every note, and clinical voice status); comparisons must remain provisional.
+
+Do not infer register from frequency alone. A head-dominant high note, a belt and a brief unstable extreme must not be treated as the same accomplishment. A song can be transposed while navigation develops. A teacher can help choose an appropriate strategy; a clinician is appropriate for voice-health concerns.
+
+## Safety boundary
+
+The app asks about readiness before any singing screen, blocks singing for reported soreness, hoarseness, tiredness or recovery, and has a stop control. These are product safeguards, **not clinical validation**. [NIDCD](https://www.nidcd.nih.gov/health/taking-care-your-voice) advises avoiding singing when hoarse or tired and resting during illness. Losing previously available high notes is a warning sign, not a diagnosis and not an instruction to practice harder.
+
+The short optional exercise durations are engineering limits. They are not proven safe doses. Do not attempt unfamiliar gestures merely because a timer permits them.

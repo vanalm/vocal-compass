@@ -73,7 +73,7 @@ export function LabScreen({
   };
 
   const saveTrial = () => {
-    void runner.complete({ intent, effort, register });
+    void runner.complete({ intent, effort, register }).catch(() => { /* runner retains the unsaved attempt and error */ });
     setIntent(null);
     setShowRescue(false);
   };
@@ -147,11 +147,11 @@ export function LabScreen({
                 disabled={runner.phase !== "idle"}
                 onClick={() => setSettings((s) => ({ ...s, feedbackMode: mode }))}
               >
-                {mode}
+                {mode === "commit" ? "after trial" : mode}
               </button>
             ))}
           </div>
-          <p className="vc-small">Default for this module: {exercise.defaultFeedback}. Live pitch is hidden in blind/commit so the destination forms internally first.</p>
+          <p className="vc-small">Live shows pitch while singing. After trial and blind hide it until review. These are practice modes; the dedicated check-in also withholds results between attempts.</p>
         </div>
         <div className="vc-field">
           <label>Confidence before singing: {confidence}/5</label>
@@ -228,7 +228,7 @@ export function LabScreen({
             <h3>Sing</h3>
             <p>Commit to one note. Capture stops automatically.</p>
             {showMap && <KeyMap trial={trial} sounding={trial.targetMidi} />}
-            <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
+            <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={showLive ? runner.liveSample : null} />
             <NoiseWarning noisy={runner.tooNoisy} />
             {showLive && <PitchReadout sample={runner.liveSample} targetMidi={trial.targetMidi} />}
             <div className="vc-actions vc-center-actions">

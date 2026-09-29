@@ -85,8 +85,7 @@ export function SettingsScreen({ account, onCheckMic }: { account: Account; onCh
           <h3>Pacing</h3>
         </div>
         <p className="vc-small">
-          Click: you confirm each step, and the spacebar works. Auto: moves on by itself after each
-          success.
+          Click: you confirm each step, and the spacebar works. Auto: advances from cue to singing after a fixed pause; it does not wait for success.
         </p>
         <FlowModeToggle mode={flowMode} onChange={setFlowMode} />
       </section>

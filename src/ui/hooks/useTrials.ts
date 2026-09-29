@@ -15,17 +15,20 @@ export function useTrials(onChange: () => void) {
   const [sessions, setSessions] = useState<ExerciseSession[]>([]);
   const [phrases, setPhrases] = useState<PhraseRecord[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    try {
     setTrials(await repository.all());
     setRanges(await repository.ranges());
     setSessions(await repository.sessions());
     setPhrases(await repository.phrases());
-    setLoaded(true);
+    setLoaded(true); setLoadError(null);
+    } catch (error) { setLoadError("Saved records could not be loaded. This may be a browser storage restriction; do not assume this empty view means your history is gone."); throw error; }
   }, [repository]);
 
   useEffect(() => {
-    void refresh();
+    void refresh().catch(() => { /* Persistent, visible error is rendered by the shell. */ });
   }, [refresh]);
 
   const written = useCallback(async () => {
@@ -77,5 +80,5 @@ export function useTrials(onChange: () => void) {
     saveJsonFile(await repository.exportJson(), "vocal-compass");
   }, [repository]);
 
-  return { trials, ranges, sessions, phrases, loaded, save, saveRange, saveSession, savePhrase, deleteTrial, exportJson, refresh };
+  return { trials, ranges, sessions, phrases, loaded, loadError, save, saveRange, saveSession, savePhrase, deleteTrial, exportJson, refresh };
 }

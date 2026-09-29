@@ -16,7 +16,7 @@ import { CueIndicator, MicMeter, useSpacebarAdvance } from "../components/TrialS
 const GUIDE_COPY: Record<GuideStrength, string> = {
   full: "guide plays every note",
   anchor: "guide plays first + last only",
-  none: "no guide — this take is verified",
+  none: "no melody guide — practice only",
 };
 
 const DEFAULT_BPM = 90;
@@ -73,9 +73,10 @@ export function QuestScreen({
       <div className="vc-grid">
         <section className="vc-card vc-card-pad" style={{ gridColumn: "span 12" }}>
           <div className="vc-section-title">
-            <h3>Echo Quest</h3>
+            <h3>Phrase practice</h3>
             <span className="vc-small">copy the phrase · guide fades as you pass · spacebar advances</span>
           </div>
+          <p className="vc-notice">These are practice scores, not verified performance. Guidance fades using an 80% practice threshold chosen for the app, not a validated mastery rule. No chord audio plays during capture: the current pitch detector cannot reliably reject accompaniment.</p>
           {levels.map((level) => (
             <div key={level} className="vc-quest-level">
               <p className="vc-small">
@@ -102,7 +103,7 @@ export function QuestScreen({
                         </span>
                         <span className={`vc-quest-guide vc-quest-guide-${progress.guide}`}>
                           {progress.guide === "none" && progress.bestVerified != null
-                            ? `verified ${Math.round(progress.bestVerified * 100)}%`
+                            ? `earlier guide-free label: ${Math.round(progress.bestVerified * 100)}%`
                             : `next: ${progress.guide} guide`}
                         </span>
                       </button>
@@ -201,7 +202,7 @@ export function QuestScreen({
             <p className="vc-quest-keep">Keep: {runner.score.keep}</p>
             <p className="vc-quest-fix">Fix: {runner.score.fix}</p>
             {spec.guide === "none" && runner.attemptOfSpec === 1 && (
-              <p className="vc-small">This was a verified take — first attempt, no guide.</p>
+              <p className="vc-small">No melody guide on this practice take. This is not a validated cold test or evidence of song transfer.</p>
             )}
             <div className="vc-actions vc-center-actions">
               <button className="vc-button primary" onClick={() => void runner.save()}>Save and continue</button>

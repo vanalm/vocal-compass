@@ -15,13 +15,13 @@ export function kpiCards(summary: KpiSummary): Array<{ label: string; value: str
   const rate = (v: number, hint: string) =>
     summary.scored === 0 ? { value: "—", hint: "no scored trials yet" } : { value: pct(v), hint };
   return [
-    { label: "Independent destination accuracy", ...rate(summary.independentAccuracy, "correct, no hints") },
-    { label: "Destination accuracy", ...rate(summary.destinationAccuracy, `${summary.scored} scored trials`) },
-    { label: "Availability rate", ...rate(summary.availabilityRate, "target present before singing") },
+    { label: "Unguided first-note hits", ...rate(summary.independentAccuracy, "blind, no hints or replay / all scorable attempts") },
+    { label: "First-note accuracy", ...rate(summary.destinationAccuracy, `${summary.scored} scored trials`) },
+
     { label: "Map-loss rate", ...rate(summary.mapLossRate, "lost or no-target events") },
-    { label: "Median selection latency", value: ms(summary.medianLatencyMs), hint: "go-cue → first voiced" },
+    { label: "Median voice-onset latency", value: ms(summary.medianLatencyMs), hint: "go-cue → first voiced" },
     { label: "Hint rate", ...rate(summary.hintRate, "trials needing rescue") },
-    { label: "Median recovery", value: ms(summary.medianRecoveryMs), hint: "lost → commitment" },
+
     {
       label: "Correct-target residual",
       value: summary.correctTargetMedianResidual == null ? "—" : `${summary.correctTargetMedianResidual.toFixed(0)}¢`,

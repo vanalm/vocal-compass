@@ -1,11 +1,15 @@
 # Vocal Compass
 
-A local-first melodic navigation trainer. Most pitch apps ask one question —
-how far was the sung pitch from the expected frequency? Vocal Compass asks two
-independent ones: **which musical destination did you select**, and **how well
-did your voice land on that selected destination?** A clean landing on the
-wrong note is a selection error, not a vocal-control error, and they are
-trained differently.
+A local-first melodic navigation practice tool. It separates the **first stable
+observed note**, **intonation around that note**, **support used**, and the
+singer's optional explanation. A pitch tracker does not know intention, register,
+strain or overall musical quality.
+
+The September 2026 audit adds Today / Practice / Progress / Guide, inspectable
+check-ins, an in-app research library and explicit alternatives/limitations.
+This is an **evaluation candidate, not a validated training intervention**.
+See [the deep audit](docs/science-audit.md) and
+[open release gates](docs/release-validation.md).
 
 Practice runs in the browser and is saved on the device (IndexedDB), signed in
 or not, online or not. An account is optional: sign in to back practice up and
@@ -86,9 +90,9 @@ DOM assumptions — and every seam is an interface or abstract class:
 | `sync/ApiClient.ts` | The one door to `server/`: same-origin requests carrying the HttpOnly session cookie; failures surface as typed errors (offline, signed out, retry later) | — |
 | `sync/syncAccount.ts` | Pushes what this device hasn't sent and pulls what it hasn't seen, a page at a time, recorded in a per-account `SyncLedger` kept in IndexedDB | A new record kind: one entry in its `LOCAL` table |
 | `sync/AccountSync.ts` | The account and its sync as one state machine: syncs after saves, on reconnect and on a stale tab, one run at a time | — |
-| `kpi/practiceTime.ts` | Practice minutes derived by clustering record timestamps; no session bookkeeping | — |
+| `kpi/practiceTime.ts` | Legacy estimated-duration helper, not a measured practice stopwatch | — |
 | `kpi/pitchZones.ts` | Register heat map data: destination accuracy per 3-semitone zone | — |
-| `kpi/KpiCalculator.ts` | KPI engine — deliberately never one "singing score" | — |
+| `kpi/KpiCalculator.ts` | Descriptive compatibility summaries; matched check-ins live in `measurement/checkins.ts` | — |
 | `recommend/Recommender.ts` | Picks today's session from the largest deficit, with a plain-language reason | — |
 
 `src/ui` is a thin React layer: `services.tsx` is the composition root
@@ -99,18 +103,18 @@ screens render state.
 ## Scope and honest limitations
 
 - Five pitch modules (Direct echo, Route replay, Silent map, Tonal north,
-  Missing note), a guided range walk, and Echo Quest phrases.
-- Blind / commit-then-reveal / live feedback; live pitch is hidden by default
-  so the destination forms internally before the voice moves.
-- Intent confirmation on ambiguous trials — the app never pretends a pitch
-  tracker can read intention. Unscored beats mis-scored.
-- The MPM detector plus smoother is solid for note-level work; validate across
+  Pattern completion), a guided range walk, and phrase practice.
+- Live or after-trial practice feedback. Versioned check-ins hide online pitch
+  and withhold results until the block ends; all captured first attempts are kept.
+- Optional intent confirmation in practice; check-ins do not invent self-reports.
+  Unscored input stays missing, with capture coverage shown.
+- The MPM detector plus smoother has synthetic regression coverage; validate across
   devices, rooms and registers before trusting fine-grained cents data. The
   noise gate adapts to loud rooms and offers the rumble filter, but singing
   over noise still wants a close mic. Every mic feature so far was tested with
   a synthetic singer, not a real voice.
-- Range training is measurement and aiming, not technique instruction — the
-  app cannot hear strain, so the effort self-rating gates any range ladder.
+- Range is an observation, not a certified usable range or higher belt. Readiness
+  is checked before singing; optional exploration is not the original VFE protocol.
 - Not yet built: Run Forge (a tempo staircase over phrases), song import, load
   ladder automation.
 
@@ -119,3 +123,28 @@ screens render state.
 `docs/training-protocol-decision.md` (the 8-week protocol and its evidence) ·
 `docs/range-training-evidence.md` · `docs/vocal-musicianship-roadmap.md` ·
 `docs/productionization-plan.md` · `docs/handoff.md` (state for the next session)
+
+## Measurement and documentation
+
+The primary progress comparison uses complete `vc-checkin-2` blocks with
+`stable-center-2` scoring, matching item set/home note/device/filter on different
+days. Legacy and mixed practice records remain inspectable but are not silently
+upgraded. Fifteen attempts are a preliminary snapshot, not a diagnosis. Read
+[the measurement contract](docs/measurement-contract.md) for denominators,
+uncertainty, missing values, device limitations and versioning.
+
+The Guide uses `src/core/science/evidence.ts` for study-level findings, limits,
+access depth, review dates and DOI/PubMed links. The eight-week horizon and
+session cadence are planning choices, not prescriptions or promised gains.
+
+## Isolated visual preview
+
+```bash
+node scripts/build-review.mjs vocal-compass-review.html
+```
+
+This produces a self-contained design preview with temporary mock storage,
+disabled microphone/accounts and an explicit fabricated-sample switch. It is
+not a practice client, deployment or substitute for the real-device checks.
+It is never imported by the production entrypoint. Personal goal wording stays
+on the device and is not currently part of trial JSON export/account sync.

@@ -34,7 +34,7 @@ describe("cue policy: only the tones the task needs", () => {
 });
 
 describe("Exercise guides", () => {
-  it.each(IDS)("%s explains the task, the mechanism, and the neuroscience with sources", (id) => {
+  it.each(IDS)("%s explains the task and rationale with linked evidence and limits", (id) => {
     const { guide } = exercises.get(id);
     // The task is one sentence: a single terminating period, at the very end.
     expect(guide.task.trim().endsWith(".")).toBe(true);
@@ -43,9 +43,11 @@ describe("Exercise guides", () => {
     for (const text of [guide.skill, guide.trains, guide.why, guide.brain]) {
       expect(text.length).toBeGreaterThan(8);
     }
-    expect(guide.science.length).toBeGreaterThanOrEqual(3);
+    expect(guide.science.length).toBeGreaterThanOrEqual(1);
     for (const note of guide.science) {
       expect(note.point.length).toBeGreaterThan(40);
+      expect(note.point).toContain("Limits:");
+      expect(note.source).toMatch(/https:\/\//);
       expect(note.source).toMatch(/\b(19|20)\d{2}\b/);
     }
     expect(guide.tips.length).toBeGreaterThan(0);

@@ -1,306 +1,38 @@
 import { useState } from "react";
-import {
-  exercises,
-  nextActions,
-  noteName,
-  pitchZones,
-  practiceDays,
-  type ExerciseSession,
-  type Lane,
-  type PhraseRecord,
-  type RangeMeasurement,
-  type TrialRecord,
-} from "../../core";
-import { useServices } from "../services";
+import { exercises,noteName,type ExerciseSession,type Lane,type PhraseRecord,type RangeMeasurement,type TrialRecord } from "../../core";
+import { observedRate,checkinBlocks,residual } from "../../core/measurement/checkins";
+import { CheckinProgress,RateReadout } from "../components/CheckinProgress";
+import { TrialSummary } from "../components/TrialSummary";
+import { RangeChart } from "../components/ProgressCharts";
+import { Modal } from "../components/Modal";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { KpiCards } from "../components/KpiCards";
-import { NextUpCard } from "../components/NextUpCard";
-import { ImprovementCard } from "../components/ImprovementCard";
-import { PracticeChart, RangeChart, RegisterHeatMap } from "../components/ProgressCharts";
-
-/** Exercise titles by id; a trial synced from a newer version may name one this version lacks. */
-const EXERCISE_TITLES = new Map(exercises.all().map((e) => [e.id, e.title]));
-
-/** When a trial was saved: the time for today's, the date too for anything older. */
-function savedAt(createdAt: string, now: Date): string {
-  const then = new Date(createdAt);
-  return then.toDateString() === now.toDateString()
-    ? then.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : then.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
-const pct = (v: number) => `${Math.round(v * 100)}%`;
-
-export function ProgressScreen({
-  trials,
-  ranges,
-  sessions,
-  phraseRecords,
-  signedIn,
-  onGo,
-  onDeleteTrial,
-  onOpenAccount,
-  onExport,
-  onClear,
-}: {
-  trials: TrialRecord[];
-  ranges: RangeMeasurement[];
-  sessions: ExerciseSession[];
-  phraseRecords: PhraseRecord[];
-  /** Whether an account holds a copy of this device's data, which changes what clearing and deleting mean. */
-  signedIn: boolean;
-  onGo: (lane: Lane) => void;
-  onDeleteTrial: (id: string) => Promise<void>;
-  onOpenAccount: () => void;
-  onExport: () => void;
-  onClear: () => void;
-}) {
-  const { kpi } = useServices();
-  const [confirmingClear, setConfirmingClear] = useState(false);
-  const [deletingTrial, setDeletingTrial] = useState<string | null>(null);
-  const summary = kpi.summarize(trials);
-  const byExercise = kpi.byExercise(trials);
-  const delayCurve = kpi.byDelay(trials);
-  const trend = kpi.trend(trials);
-  const recent = [...trials].slice(-12).reverse();
-  const now = new Date();
-  const days = practiceDays([
-    ...trials.map((t) => t.createdAt),
-    ...ranges.map((r) => r.createdAt),
-    ...phraseRecords.map((r) => r.createdAt),
-  ]);
-
-  const lanes = nextActions(now, trials, ranges, sessions);
-
-  return (
-    <div className="vc-grid">
-      <section className="vc-card vc-side" style={{ gridColumn: "span 12" }}>
-        <NextUpCard lanes={lanes} onGo={onGo} />
-      </section>
-
-      <section className="vc-card vc-side" style={{ gridColumn: "span 12" }}>
-        <div className="vc-section-title">
-          <h3>Overall</h3>
-          <div className="vc-actions" style={{ marginTop: 0 }}>
-            <button className="vc-button" onClick={onExport}>Export JSON</button>
-            <button className="vc-button danger" onClick={() => setConfirmingClear(true)}>
-              Clear data
-            </button>
-          </div>
-        </div>
-        <KpiCards summary={summary} />
-        <p className="vc-small vc-progress-account">
-          Backup and sync across devices live in{" "}
-          <button type="button" className="vc-link" onClick={onOpenAccount}>
-            Settings → Account &amp; sync
-          </button>
-          .
-        </p>
-      </section>
-
-      <section className="vc-card vc-side" style={{ gridColumn: "span 12" }}>
-        <div className="vc-section-title">
-          <h3>Your progress</h3>
-        </div>
-        <ImprovementCard trials={trials} ranges={ranges} />
-      </section>
-
-      <div className="vc-chart-grid" style={{ gridColumn: "span 12" }}>
-        <section className="vc-card vc-chart-card">
-          <div className="vc-chart-title">
-            <div>
-              <h3>Vocal range</h3>
-              <p>Held extremes per probe — usable range, not accidents</p>
-            </div>
-          </div>
-          <RangeChart ranges={ranges} />
-        </section>
-
-        <section className="vc-card vc-chart-card">
-          <div className="vc-chart-title">
-            <div>
-              <h3>Practice time</h3>
-              <p>Minutes per day, derived from saved work</p>
-            </div>
-          </div>
-          <PracticeChart days={days} />
-        </section>
-
-        <section className="vc-card vc-chart-card">
-          <div className="vc-chart-title">
-            <div>
-              <h3>Destination accuracy trend</h3>
-              <p>Rolling buckets of 10 scored trials</p>
-            </div>
-          </div>
-          {trend.length < 2 ? (
-            <div className="vc-empty">Save at least 20 trials to see a trend.</div>
-          ) : (
-            <svg className="vc-chart" viewBox="0 0 100 60" preserveAspectRatio="none">
-              <polyline
-                fill="none"
-                stroke="#53d69e"
-                strokeWidth="1.4"
-                points={trend
-                  .map((p, i) => `${(i / (trend.length - 1)) * 100},${58 - p.accuracy * 54}`)
-                  .join(" ")}
-              />
-            </svg>
-          )}
-        </section>
-
-        <section className="vc-card vc-chart-card">
-          <div className="vc-chart-title">
-            <div>
-              <h3>Retention by silent delay</h3>
-              <p>Does the target survive silence?</p>
-            </div>
-          </div>
-          {delayCurve.length === 0 ? (
-            <div className="vc-empty">Run Silent Map trials with different delays.</div>
-          ) : (
-            <div className="vc-table-wrap">
-              <table className="vc-table">
-                <thead>
-                  <tr><th>Delay</th><th>Accuracy</th><th>Trials</th></tr>
-                </thead>
-                <tbody>
-                  {delayCurve.map((d) => (
-                    <tr key={d.delayMs}>
-                      <td>{d.delayMs / 1000} s</td>
-                      <td>{pct(d.accuracy)}</td>
-                      <td>{d.n}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <section className="vc-card vc-chart-card wide">
-          <div className="vc-chart-title">
-            <div>
-              <h3>Register heat map</h3>
-              <p>Destination accuracy by target pitch — where the range work should aim</p>
-            </div>
-          </div>
-          <RegisterHeatMap zones={pitchZones(trials)} />
-        </section>
-
-        <section className="vc-card vc-chart-card wide">
-          <div className="vc-chart-title">
-            <div>
-              <h3>By module</h3>
-              <p>Independent accuracy per exercise — the deficit map</p>
-            </div>
-          </div>
-          <div className="vc-table-wrap">
-            <table className="vc-table">
-              <thead>
-                <tr><th>Module</th><th>Scored</th><th>Destination</th><th>Independent</th><th>Map loss</th></tr>
-              </thead>
-              <tbody>
-                {exercises.all().map((e) => {
-                  const s = byExercise.get(e.id);
-                  // A rate needs a scored trial; with none, 0% would misstate it.
-                  const rated = s && s.scored > 0 ? s : null;
-                  return (
-                    <tr key={e.id}>
-                      <td>{e.title}</td>
-                      <td>{s?.scored ?? 0}</td>
-                      <td>{rated ? pct(rated.destinationAccuracy) : "—"}</td>
-                      <td>{rated ? pct(rated.independentAccuracy) : "—"}</td>
-                      <td>{rated ? pct(rated.mapLossRate) : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="vc-card vc-chart-card wide">
-          <div className="vc-chart-title">
-            <div>
-              <h3>Recent trials</h3>
-              <p>Every result opens to its evidence: acoustic label + your confirmation</p>
-            </div>
-          </div>
-          {recent.length === 0 ? (
-            <div className="vc-empty">No trials yet — start in the Lab.</div>
-          ) : (
-            <div className="vc-table-wrap">
-              <table className="vc-table">
-                <thead>
-                  <tr><th>When</th><th>Module</th><th>Requested</th><th>Selected</th><th>Result</th><th>Hints</th><th>Intent</th><th aria-label="Delete" /></tr>
-                </thead>
-                <tbody>
-                  {recent.map((t) => (
-                    <tr key={t.id}>
-                      <td>{savedAt(t.createdAt, now)}</td>
-                      <td>{EXERCISE_TITLES.get(t.definition.exerciseId) ?? t.definition.exerciseId}</td>
-                      <td>{noteName(t.definition.targetMidi)}</td>
-                      <td>{t.selectedNote ?? "—"}</td>
-                      <td>{t.finalErrorKind}</td>
-                      <td>{t.hintLevel || "—"}</td>
-                      <td>{t.intent ?? "—"}</td>
-                      <td>
-                        <button
-                          className="vc-row-delete"
-                          aria-label="Delete this trial"
-                          title="Delete this trial"
-                          onClick={() => setDeletingTrial(t.id)}
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-
-      {confirmingClear && (
-        <ConfirmDialog
-          title="Clear data on this device?"
-          confirmLabel="Clear data"
-          onConfirm={onClear}
-          onClose={() => setConfirmingClear(false)}
-        >
-          <p>Every trial, range measurement, session and phrase attempt saved in this browser is deleted.</p>
-          {signedIn ? (
-            <p>
-              Your account keeps its copy, and it syncs back to this device. To delete that copy too, delete the
-              account in Settings.
-            </p>
-          ) : (
-            <>
-              <p>Anything not synced to an account is gone for good. Export JSON first if you want a backup.</p>
-              <p>
-                <strong>This can't be undone.</strong>
-              </p>
-            </>
-          )}
-        </ConfirmDialog>
-      )}
-      {deletingTrial && (
-        <ConfirmDialog
-          title="Delete this trial?"
-          confirmLabel="Delete trial"
-          onConfirm={() => void onDeleteTrial(deletingTrial)}
-          onClose={() => setDeletingTrial(null)}
-        >
-          <p>
-            {signedIn
-              ? "It's deleted from your account and your other devices too."
-              : "It won't come back, through sync or from an imported backup."}
-          </p>
-        </ConfirmDialog>
-      )}
-    </div>
-  );
+const TITLES=new Map(exercises.all().map(e=>[e.id,e.title]));
+export function ProgressScreen({trials,ranges,phraseRecords,signedIn,onGo,onDeleteTrial,onOpenAccount,onExport,onClear}: {
+ trials:TrialRecord[];ranges:RangeMeasurement[];sessions:ExerciseSession[];phraseRecords:PhraseRecord[];signedIn:boolean;
+ onGo:(lane:Lane)=>void;onDeleteTrial:(id:string)=>Promise<void>;onOpenAccount:()=>void;onExport:()=>void;onClear:()=>void;
+}){
+ const [scope,setScope]=useState("checkin"),[module,setModule]=useState("all"),[feedback,setFeedback]=useState("all"),[selected,setSelected]=useState<TrialRecord|null>(null),[deleting,setDeleting]=useState<string|null>(null),[clearing,setClearing]=useState(false),[error,setError]=useState<string|null>(null);
+ const [limit,setLimit]=useState(20);
+ const scoped=trials.filter(t=>scope==="legacy"?!t.measurement:t.measurement?.purpose===scope);
+ const rows=scoped.filter(t=>(module==="all"||t.definition.exerciseId===module)&&(feedback==="all"||t.feedbackMode===feedback)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+ const score=observedRate(rows),cents=residual(rows);
+ const blocks=checkinBlocks(trials),last=blocks.at(-1);
+ const remove=async()=>{if(!deleting)return;try{await onDeleteTrial(deleting);setDeleting(null);}catch{setError("Deletion failed. The saved trial has not been removed.");}};
+ return <div className="vc-progress-page">
+  <header className="vc-page-heading"><span className="vc-eyebrow">Your progress</span><h2>See what holds up.</h2><p>Check-ins measure one fixed task without online pitch guidance. Practice and older records are kept separate.</p><button className="vc-button primary" onClick={()=>onGo("test")}>{blocks.length?"Take another check-in":"Establish my starting point"}</button></header>
+  <CheckinProgress trials={trials}/>
+  <section className="vc-card vc-card-pad"><h3>Inspect the evidence</h3><div className="vc-tabs" role="group" aria-label="Record type">{[["checkin","Check-ins"],["practice","Practice"],["legacy","Earlier records"]].map(([id,label])=><button key={id} className={id===scope?"active":""} aria-pressed={id===scope} onClick={()=>{setScope(id);setLimit(20);}}>{label}</button>)}</div>
+   <div className="vc-two-up"><label>Exercise<select value={module} onChange={e=>setModule(e.target.value)}><option value="all">All exercises</option>{exercises.all().map(e=><option key={e.id} value={e.id}>{e.title}</option>)}</select></label><label>Feedback<select value={feedback} onChange={e=>setFeedback(e.target.value)}><option value="all">All modes</option><option value="blind">Blind</option><option value="commit">After trial</option><option value="live">Live</option></select></label></div>
+   <p className="vc-notice">{scope==="legacy"?"These records lack current measurement provenance. Keep them as history, not a verified baseline.":scope==="practice"?"Practice conditions can differ. These totals describe selected attempts; they are not a learning trend.":"These totals include all selected check-in attempts, including partial blocks. Use the matched comparison above for change over time."}</p>
+   <div className="vc-three-up vc-stat-cards"><div><span>Observed first-note hits</span><RateReadout rate={score}/></div><div><span>Capture coverage</span><strong>{score.n}/{rows.length}</strong><p>scorable / saved attempts</p><p className="vc-small">{rows.length-score.n} unscored—not counted as wrong</p></div><div><span>Matched-note intonation</span><strong>{cents==null?"—":`${cents.toFixed(0)}¢`}</strong><p>median absolute error, matched notes only</p><p className="vc-small">Not a vocal-quality score</p></div></div>
+   {rows.length===0?<p className="vc-empty">No records in this view yet. Nothing is scored as zero just because you have not started.</p>:<div className="vc-table-wrap"><table className="vc-table"><caption>Every saved attempt can be opened to inspect its trace and context.</caption><thead><tr><th>Date</th><th>Exercise</th><th>Requested</th><th>First stable note</th><th>Support</th><th>Review</th></tr></thead><tbody>{rows.slice(0,limit).map(t=><tr key={t.id}><td>{new Date(t.createdAt).toLocaleString([], {month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</td><td>{TITLES.get(t.definition.exerciseId)??t.definition.exerciseId}</td><td>{noteName(t.definition.targetMidi)}</td><td>{t.scored?t.selectedNote:"Unscored"}</td><td>{t.feedbackMode==="live"?"Live + ":""}{t.hintLevel} hints · {t.cueReplayCount??"?"} replays</td><td><button className="vc-button ghost" onClick={()=>setSelected(t)}>Details</button></td></tr>)}</tbody></table>{rows.length>limit&&<button className="vc-button" onClick={()=>setLimit(n=>n+30)}>Show more ({rows.length-limit} remaining)</button>}</div>}
+   {scope==="checkin"&&last&&!last.complete&&<p className="vc-small">The latest block is not eligible for comparison: {last.issues.join("; ")}. Its attempts remain saved.</p>}
+  </section>
+  <details className="vc-card vc-card-pad"><summary>Phrase practice history ({phraseRecords.length})</summary><p>Use this to inspect musical practice, not as a controlled test of transfer. Changes in phrase, key, tempo, role or guide change the task. Timing is device-dependent.</p>{phraseRecords.length===0?<p>No phrase attempts saved yet. Open Practice → Phrases to try a short pattern.</p>:<div className="vc-table-wrap"><table className="vc-table"><caption>Most recent 30 phrase attempts — practice observations</caption><thead><tr><th>When</th><th>Phrase</th><th>Key</th><th>Tempo</th><th>Role / guide</th><th>Hits / notes</th><th>Sequence</th></tr></thead><tbody>{[...phraseRecords].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,30).map(r=><tr key={r.id}><td>{new Date(r.createdAt).toLocaleDateString()}</td><td>{r.phraseName}</td><td>{noteName(r.keyTonicMidi)}</td><td>{r.bpm} bpm</td><td>{r.role} / {r.guide}</td><td>{r.hits} / {r.hits+r.misses}</td><td>{Math.round(r.sequenceAccuracy*100)}%</td></tr>)}</tbody></table></div>}</details>
+  <details className="vc-card vc-card-pad"><summary>Range is a separate observation</summary><p>Held notes are not necessarily usable, comfortable or belted. Compare like methods and repeat across days; there is no validated three-semitone threshold here.</p><RangeChart ranges={ranges}/><button className="vc-button" onClick={()=>onGo("range-probe")}>Open range</button></details>
+  <section className="vc-card vc-card-pad"><h3>Keep control of your data</h3><p>{signedIn?"An account is connected. Check Settings for actual sync status.":"These records are stored on this browser. Export a backup; browser storage can be cleared."}</p><div className="vc-actions"><button className="vc-button" onClick={onExport}>Export JSON</button><button className="vc-button" onClick={onOpenAccount}>Account & sync</button><button className="vc-button ghost" onClick={()=>setClearing(true)}>Clear this device…</button></div>{error&&<p role="alert">{error}</p>}</section>
+  {selected&&<Modal labelledBy="record-title" onClose={()=>setSelected(null)}><div className="vc-modal-head"><h2 id="record-title">Attempt evidence</h2><button className="vc-button" onClick={()=>setSelected(null)}>Close</button></div><p>Observed: {selected.selectedNote??"unscored"}. Requested: {selected.targetNote}. Your explanation: {selected.intent??"not collected"}.</p><p>{selected.explanation}</p><p className="vc-small">{selected.measurement?.purpose??"legacy"} · {selected.measurement?.scoringVersion??"older scoring"} · {selected.micInput??"microphone not recorded"} · filter {selected.micLowCut??"not recorded"}. Cue replays: {selected.cueReplayCount??"not recorded"}.</p>{selected.actualSilentMs!=null&&<p className="vc-small">Recorded silent interval before go: {selected.actualSilentMs} ms. Voice-onset latency is device-dependent, not a measure of thought.</p>}<TrialSummary record={selected}/><p className="vc-small">Deleting a check-in item makes its block incomplete; it cannot silently improve a complete-block comparison.</p><button className="vc-button danger" onClick={()=>{setDeleting(selected.id);setSelected(null);}}>Delete this attempt…</button></Modal>}
+  {deleting&&<ConfirmDialog title="Delete this attempt?" confirmLabel="Delete" onConfirm={()=>void remove()} onClose={()=>setDeleting(null)}><p>Deletion also removes the record through sync. A check-in missing this item is no longer complete. This cannot be undone.</p></ConfirmDialog>}
+  {clearing&&<ConfirmDialog title="Clear this device?" confirmLabel="Clear device" onConfirm={onClear} onClose={()=>setClearing(false)}><p>Export a backup first. Unsynced records are permanently lost. {signedIn?"Your account copy remains and can sync back; account deletion is separate.":"There is no connected account copy."}</p></ConfirmDialog>}
+ </div>;
 }

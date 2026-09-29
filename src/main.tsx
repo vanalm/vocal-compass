@@ -4,6 +4,7 @@ import { ApiClient } from "./core";
 import App from "./ui/App";
 import { installErrorReporting } from "./ui/telemetry";
 import "./styles.css";
+import "./finishing.css";
 
 // Production only: in development the console already shows every error, and no server may be running.
 if (import.meta.env.PROD) {

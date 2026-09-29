@@ -1,3 +1,4 @@
+import { fixtureBlock } from "./auditFixtures";
 import { describe, expect, it } from "vitest";
 import { KpiCalculator } from "../src/core/kpi/KpiCalculator";
 import { Recommender } from "../src/core/recommend/Recommender";
@@ -29,7 +30,8 @@ function record(overrides: Partial<TrialRecord> & { finalErrorKind: ErrorKind })
     explanation: "",
     id: crypto.randomUUID(),
     definition,
-    feedbackMode: "commit",
+    feedbackMode: "blind",
+    cueReplayCount: 0,
     hintLevel: 0,
     lostEvent: false,
     intent: null,
@@ -59,7 +61,7 @@ describe("KpiCalculator", () => {
     expect(summary.independentAccuracy).toBeCloseTo(0.25);
     expect(summary.hintRate).toBeCloseTo(0.25);
     expect(summary.mapLossRate).toBeCloseTo(0.25);
-    expect(summary.availabilityRate).toBeCloseTo(0.75);
+    expect(summary.availabilityRate).toBe(0); // No proxy inference from the absence of a loss report.
   });
 
   it("excludes unscored trials from rates", () => {
@@ -85,7 +87,7 @@ describe("KpiCalculator", () => {
   it("buckets retention by delay", () => {
     const at = (delayMs: number, kind: ErrorKind) => {
       const r = record({ finalErrorKind: kind });
-      r.definition = { ...r.definition, delayMs };
+      r.definition = { ...r.definition, exerciseId: "silent", delayMs };
       return r;
     };
     const curve = kpi.byDelay([
@@ -106,17 +108,11 @@ describe("Recommender", () => {
     expect(rec.reason).toMatch(/baseline/i);
   });
 
-  it("targets the weakest module once all have data", () => {
-    const trials: TrialRecord[] = [];
-    for (const e of exercises.all()) {
-      for (let i = 0; i < 8; i += 1) {
-        const r = record({ finalErrorKind: e.id === "silent" ? "selection" : "success" });
-        r.definition = { ...r.definition, exerciseId: e.id };
-        trials.push(r);
-      }
-    }
-    const rec = new Recommender().recommend(trials, exercises.all());
+  it("offers a tentative practice question from a complete check-in", () => {
+    const trials=fixtureBlock("a",undefined,15);
+    for(const r of trials)if(r.definition.exerciseId==="silent"){r.destinationMatch=false;r.finalErrorKind="selection";}
+    const rec=new Recommender().recommend(trials,exercises.all());
     expect(rec.exercise.id).toBe("silent");
-    expect(rec.reason).toMatch(/lowest/i);
+    expect(rec.reason).toMatch(/practice question/);
   });
 });

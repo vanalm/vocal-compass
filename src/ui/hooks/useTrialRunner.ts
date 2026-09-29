@@ -8,6 +8,7 @@ import {
   type FeedbackMode,
   type IntentLabel,
   type MicStatus,
+  type MeasurementContext,
   type PitchSample,
   type RegisterLabel,
   type TrialDefinition,
@@ -21,6 +22,8 @@ export interface RunnerSettings {
   difficulty: Difficulty;
   delayMs: number;
   feedbackMode: FeedbackMode;
+  definition?: TrialDefinition;
+  measurement?: MeasurementContext;
 }
 
 export type RunnerPhase = "idle" | "listen" | "imagine" | "sing" | "review";
@@ -52,6 +55,9 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
    * so discarding mid-trial can't be undone by a step still in flight.
    */
   const runRef = useRef(0);
+  const startingRef = useRef(false);
+  const savingRef = useRef(false);
+  const cueEndedAt = useRef<number | null>(null);
 
   const [phase, setPhase] = useState<RunnerPhase>("idle");
   const [flowMode, setFlowModeState] = useState<FlowMode>(() => options.flow ?? loadFlowMode());
@@ -93,6 +99,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     return () => {
       runRef.current += 1;
       cues.stop();
+      if (singTimer.current != null) window.clearTimeout(singTimer.current);
       unsubscribe();
       microphone.stop();
     };
@@ -121,33 +128,43 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
 
   const start = useCallback(
     async (settings: RunnerSettings, confidence: number) => {
-      runRef.current += 1;
-      const run = runRef.current;
-      const exercise = exercises.get(settings.exerciseId);
-      const trial = exercise.createTrial({
-        difficulty: settings.difficulty,
-        delayMs: settings.delayMs,
-      });
-      const session = new TrialSession(trial, settings.feedbackMode);
-      session.confidenceBefore = confidence;
-      session.micLowCut = microphone.lowCutSetting;
-      sessionRef.current = session;
-      const plan = exercise.cuePlan(trial);
-      planRef.current = plan;
+      if (startingRef.current) return;
+      startingRef.current = true;
+      const run = ++runRef.current;
+      setMicError(null);
       setAnalysis(null);
-      setLost(false);
-      setHintLevel(0);
-      setRemainingDelayMs(0);
-      setPrompt(plan.prompt);
-
       setPhase("listen");
-      session.beginListening();
-      if (!(await playCue(plan, trial, run))) return;
-      // One decision point after the cue: replay it, or commit and sing.
-      enterImagine(session, run);
+      try {
+        // Both contexts resume from the initiating gesture; permission is resolved before cues.
+        const audioReady = cues.prepare();
+        await Promise.all([audioReady, microphone.start()]);
+        if (runRef.current !== run) return;
+        if (microphone.status !== "live") { setPhase("idle"); return; }
+        const exercise = exercises.get(settings.exerciseId);
+        const trial = settings.definition ?? exercise.createTrial({ difficulty: settings.difficulty, delayMs: settings.delayMs });
+        const session = new TrialSession(trial, settings.feedbackMode);
+        session.confidenceBefore = confidence;
+        if (settings.measurement) session.measurement = {...settings.measurement};
+        session.micLowCut = microphone.lowCutSetting;
+        session.micInput = microphone.inputLabel;
+        sessionRef.current = session;
+        const plan = exercise.cuePlan(trial);
+        planRef.current = plan;
+        setLost(false); setHintLevel(0); setRemainingDelayMs(0); setPrompt(plan.prompt);
+        session.beginListening();
+        if (!(await playCue(plan, trial, run))) return;
+        cueEndedAt.current = Date.now();
+        enterImagine(session, run);
+      } catch (error) {
+        if (runRef.current === run) {
+          cues.stop(); microphone.stop(); sessionRef.current = null;
+          setPhase("idle"); setCuePlaying(false);
+          setMicError(error instanceof Error ? error.message : "Audio could not start. Please check microphone access.");
+        }
+      } finally { startingRef.current = false; }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cues],
+    [cues, microphone],
   );
 
   const setFlowMode = useCallback((mode: FlowMode) => {
@@ -161,7 +178,9 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     const session = sessionRef.current;
     const plan = planRef.current;
     if (!session || !plan || cuePlaying || committed.current) return;
-    await playCue(plan, session.definition, runRef.current);
+    session.cueReplayCount += 1;
+    try { await playCue(plan, session.definition, runRef.current); cueEndedAt.current = Date.now(); }
+    catch (error) { setMicError(error instanceof Error ? error.message : "Cue playback failed"); setCuePlaying(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cues, cuePlaying]);
 
@@ -175,7 +194,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     if (flowModeRef.current === "auto") {
       window.setTimeout(() => {
         if (runRef.current === run) commitRef.current?.();
-      }, AUTO_BEAT_MS);
+      }, session.definition.delayMs > 0 ? 0 : AUTO_BEAT_MS);
     }
   };
 
@@ -220,19 +239,25 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     const plan = planRef.current;
     if (!session || !plan) return;
     const run = runRef.current;
-    await microphone.start();
-    if (runRef.current !== run) return;
-    session.micInput = microphone.inputLabel;
+    if (microphone.status !== "live") {
+      setMicError("Microphone capture stopped. This attempt is incomplete; restart after checking the input.");
+      setPhase("idle"); sessionRef.current = null; return;
+    }
     if (plan.playStartAtGo) {
       setCuePlaying(true);
       setCueLabel(plan.goLabel ?? null);
       setCueMidi(session.definition.startMidi);
-      await cues.playNote(session.definition.startMidi, 500);
+      try { await cues.playNote(session.definition.startMidi, 500); }
+      catch (error) { setMicError(error instanceof Error ? error.message : "Cue failed"); microphone.stop(); setPhase("idle"); return; }
+      // Do not begin scoring a cue's tail. Headphones remain required.
+      await new Promise(resolve => window.setTimeout(resolve, 250));
+      cueEndedAt.current = Date.now();
       if (runRef.current !== run) return;
       setCuePlaying(false);
       setCueLabel(null);
       setCueMidi(null);
     }
+    session.actualSilentMs = cueEndedAt.current == null ? undefined : Date.now() - cueEndedAt.current;
     session.beginSinging();
     setPhase("sing");
     singTimer.current = window.setTimeout(() => {
@@ -247,40 +272,45 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     if (!session || session.currentPhase !== "sing") return;
     if (singTimer.current != null) window.clearTimeout(singTimer.current);
     setAnalysis(session.finishSinging());
+    microphone.stop();
     setPhase("review");
-  }, []);
+  }, [microphone]);
 
   const markLost = useCallback(() => {
     sessionRef.current?.markLost();
     setLost(true);
   }, []);
 
-  /** Rescue audio per PRD §8; the ladder itself records the hint cost. */
-  const rescue = useCallback(
-    async (level: number) => {
-      const session = sessionRef.current;
-      if (!session) return;
-      session.useRescue(level);
-      setHintLevel(session.rescue.hintLevel);
-      const { tonicMidi, startMidi, targetMidi } = session.definition;
+  /** Rescue sounds are never captured as the singer. End this attempt before playing help. */
+  const rescue = useCallback(async (level: number) => {
+    const session = sessionRef.current;
+    if (!session) return;
+    session.useRescue(level);
+    setHintLevel(session.rescue.hintLevel);
+    if (session.currentPhase === "sing") finish();
+    const { tonicMidi, startMidi, targetMidi } = session.definition;
+    try {
       if (level === 2) await cues.playSequence([tonicMidi, startMidi], 450, 90);
       if (level === 3) await cues.playSequence([startMidi, targetMidi], 500, 100);
       if (level === 4) await cues.playNote(targetMidi, 800);
-    },
-    [cues],
-  );
+    } catch (error) { setMicError(error instanceof Error ? error.message : "Rescue playback failed"); }
+  }, [cues, finish]);
 
   const complete = useCallback(
     async (outcome: { intent: IntentLabel | null; effort: number; register: RegisterLabel }) => {
       const session = sessionRef.current;
-      if (!session) return;
+      if (!session || savingRef.current) return;
+      savingRef.current = true;
       if (outcome.intent) session.confirmIntent(outcome.intent);
       session.effort = outcome.effort;
       session.register = outcome.register;
-      await onSave(session.toRecord());
-      sessionRef.current = null;
-      setPhase("idle");
-      setAnalysis(null);
+      try {
+        await onSave(session.toRecord());
+        sessionRef.current = null; setPhase("idle"); setAnalysis(null);
+      } catch (error) {
+        setMicError("Could not save this attempt. It is still here; retry saving before leaving.");
+        throw error;
+      } finally { savingRef.current = false; }
     },
     [onSave],
   );
@@ -289,6 +319,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
   const discard = useCallback(() => {
     runRef.current += 1;
     cues.stop();
+    microphone.stop();
     if (singTimer.current != null) window.clearTimeout(singTimer.current);
     sessionRef.current = null;
     planRef.current = null;
@@ -301,7 +332,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     setCuePlaying(false);
     setCueLabel(null);
     setRemainingDelayMs(0);
-  }, [cues]);
+  }, [cues, microphone]);
 
   return {
     phase,
