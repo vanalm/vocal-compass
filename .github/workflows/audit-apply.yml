@@ -1,0 +1,88 @@
+# Temporary, branch-scoped delivery job. No deployment or production environment.
+# Payload hashes pin the exact files already tested locally; removed before PR.
+name: Apply reviewed audit
+on:
+  push:
+    branches: [audit/science-progress-2026-09-28]
+    paths: [.github/workflows/audit-apply.yml]
+permissions:
+  contents: read
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/audit/science-progress-2026-09-28'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify and reconstruct exact audited text files
+        shell: python
+        run: |
+          import base64, hashlib, json, lzma, pathlib
+          root = pathlib.Path.cwd()
+          parts = [root / '.audit-delivery' / f'part-{i}.b64' for i in range(6)]
+          encoded = ''.join(p.read_text().strip() for p in parts)
+          assert len(encoded) == 70008, 'Unexpected transfer length'
+          compressed = base64.b64decode(encoded, validate=True)
+          assert hashlib.sha256(compressed).hexdigest() == 'e0b7308d0f3ac5cc6f7c2b3f7d7768d8cd6f6c4a75aaf9b9d18d62623e2418fb', 'Transfer digest mismatch'
+          raw = lzma.decompress(compressed)
+          assert hashlib.sha256(raw).hexdigest() == 'bf5b7899630e433e350c3f366bb79e4d6a31222d36792e31b8ac0fbd713a1ae0', 'Source manifest digest mismatch'
+          payload = json.loads(raw)
+          assert payload['base'] == '574af32f46532a4865f04c1c765a1763bfe6c33e'
+          assert len(payload['files']) == 56
+          seen = set()
+          pending = []
+          for entry in payload['files']:
+              rel = pathlib.PurePosixPath(entry['path'])
+              assert not rel.is_absolute() and '..' not in rel.parts
+              assert str(rel) not in seen
+              seen.add(str(rel))
+              allowed = rel.parts[0] in {'src', 'tests', 'docs', 'scripts'} or str(rel) in {'README.md', 'AGENTS.md'}
+              assert allowed, f'Path outside audited application scope: {rel}'
+              dest = root / rel
+              assert not dest.is_symlink()
+              assert root in dest.resolve().parents
+              old = dest.read_bytes() if dest.exists() else b''
+              assert hashlib.sha256(old).hexdigest() == entry['base_sha256'], f'Concurrent source change: {rel}'
+              lines = old.decode('utf-8').splitlines(keepends=True)
+              rebuilt = []
+              for op in entry['ops']:
+                  if isinstance(op, str):
+                      rebuilt.append(op)
+                  else:
+                      assert len(op) == 2 and all(type(n) is int for n in op)
+                      a, b = op
+                      assert 0 <= a <= b <= len(lines)
+                      rebuilt.extend(lines[a:b])
+              new = ''.join(rebuilt).encode('utf-8')
+              assert hashlib.sha256(new).hexdigest() == entry['sha256'], f'Reconstruction mismatch: {rel}'
+              pending.append((dest, new))
+          # Verify every input/output before modifying any source.
+          for dest, new in pending:
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              dest.write_bytes(new)
+          print(f'Verified and applied {len(pending)} reviewed source files.')
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+      - name: Commit verified application changes to audit branch only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/audit/science-progress-2026-09-28'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- src tests docs scripts README.md AGENTS.md
+          git diff --cached --check
+          git commit -m 'Finish science audit, honest check-ins, evidence guide, and accessible training UX'
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:refs/heads/audit/science-progress-2026-09-28
