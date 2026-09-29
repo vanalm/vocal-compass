@@ -6,9 +6,20 @@ type MapTrial = Pick<TrialDefinition, "keyName" | "tonicMidi" | "startMidi" | "t
  * The key as a ladder of its scale steps, highest on top, spanning home, where
  * you are and the target. It is the map Tonal north asks you to navigate:
  * the target is found by its place on it, not by its distance from the last
- * note heard. In review it also marks the note you sang.
+ * note heard. While a cue sounds, its rung lights, so each tone is tied to
+ * its place; when it's your turn, the target lights. In review it also marks
+ * the note you sang.
  */
-export function KeyMap({ trial, sungMidi = null }: { trial: MapTrial; sungMidi?: number | null }) {
+export function KeyMap({
+  trial,
+  sungMidi = null,
+  sounding = null,
+}: {
+  trial: MapTrial;
+  sungMidi?: number | null;
+  /** The note sounding now, or the one to sing; lights its rung. */
+  sounding?: number | null;
+}) {
   const marked = [trial.tonicMidi, trial.startMidi, trial.targetMidi, ...(sungMidi === null ? [] : [sungMidi])];
   const lowest = Math.min(...marked);
   const highest = Math.max(...marked);
@@ -46,6 +57,7 @@ export function KeyMap({ trial, sungMidi = null }: { trial: MapTrial; sungMidi?:
             midi === trial.startMidi && "here",
             midi === trial.targetMidi && "target",
             midi === sungMidi && "sung",
+            midi === sounding && "sounding",
             degree < 0 && "outside",
           ]
             .filter(Boolean)
@@ -53,6 +65,11 @@ export function KeyMap({ trial, sungMidi = null }: { trial: MapTrial; sungMidi?:
           return (
             <li key={midi} className={classes}>
               <span className="vc-keymap-step">{degree >= 0 ? `${degree + 1} ${SOLFEGE[degree]}` : "·"}</span>
+              {midi === sounding && (
+                <span className="vc-keymap-note" aria-hidden="true">
+                  ♪
+                </span>
+              )}
               <span className="vc-keymap-marks">
                 {marks.map((mark) => (
                   <em key={mark}>{mark}</em>

@@ -193,7 +193,7 @@ export function LabScreen({
             <h3>Listen</h3>
             <p>Key of {trial?.keyName}.</p>
             <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? undefined} />
-            {showMap && trial && <KeyMap trial={trial} />}
+            {showMap && trial && <KeyMap trial={trial} sounding={runner.cueMidi} />}
           </div>
         )}
 
@@ -202,7 +202,7 @@ export function LabScreen({
             <h3>Imagine</h3>
             <p>{runner.prompt}</p>
             <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? undefined} />
-            {showMap && trial && <KeyMap trial={trial} />}
+            {showMap && trial && <KeyMap trial={trial} sounding={runner.cueMidi} />}
             {runner.remainingDelayMs > 0 ? (
               <p className="vc-small" style={{ marginTop: 12 }}>
                 Hold it silently… {(runner.remainingDelayMs / 1000).toFixed(1)} s
@@ -227,7 +227,7 @@ export function LabScreen({
           <div className="vc-prompt vc-stage-prompt sing">
             <h3>Sing</h3>
             <p>Commit to one note. Capture stops automatically.</p>
-            {showMap && <KeyMap trial={trial} />}
+            {showMap && <KeyMap trial={trial} sounding={trial.targetMidi} />}
             <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
             <NoiseWarning noisy={runner.tooNoisy} />
             {showLive && <PitchReadout sample={runner.liveSample} targetMidi={trial.targetMidi} />}
@@ -275,15 +275,15 @@ export function LabScreen({
           <div className="vc-review">
             <div className="vc-verdict">
               <div>
-                <span>Selected</span>
-                <strong>{runner.analysis.selectedNote ?? "unscored"}</strong>
+                <span>You sang</span>
+                <strong>{runner.analysis.selectedNote ?? "not heard"}</strong>
               </div>
               <div>
-                <span>Requested</span>
+                <span>Answer</span>
                 <strong>{runner.analysis.targetNote}</strong>
               </div>
               <div>
-                <span>Residual on selected</span>
+                <span>Off-center</span>
                 <strong>
                   {runner.analysis.residualToSelectedCents == null
                     ? "—"

@@ -49,12 +49,12 @@ export function TrialSummary({ record }: { record: SummaryRecord }) {
         <Tile
           label="First sound"
           value={summary.timeToVoiceMs == null ? "—" : `${(summary.timeToVoiceMs / 1000).toFixed(1)} s`}
-          note="after the go"
+          note="after the cue"
         />
         <Tile
-          label="Voiced"
+          label="Singing"
           value={summary.voicedShare == null ? "—" : `${Math.round(summary.voicedShare * 100)}%`}
-          note="of the sing window"
+          note="of the time"
         />
       </div>
 

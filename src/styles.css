@@ -459,6 +459,11 @@ button { cursor: pointer; }
 .vc-keymap figcaption { margin-bottom: 8px; color: #8fa69e; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
 .vc-keymap ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
 .vc-keymap li { display: flex; align-items: center; gap: 10px; min-height: 28px; padding: 3px 10px; border-radius: 8px; border: 1px solid transparent; color: #8fa69e; }
+.vc-keymap li.sounding { background: #1a3328; border-color: #53d69e; color: #eaf8f1; box-shadow: 0 0 0 2px rgba(83, 214, 158, .25); }
+.vc-keymap-note { color: #53d69e; font-weight: 800; }
+@media (prefers-reduced-motion: no-preference) {
+  .vc-keymap li { transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+}
 .vc-keymap-step { width: 52px; flex: none; font-variant-numeric: tabular-nums; font-weight: 700; }
 .vc-keymap-marks { display: flex; flex-wrap: wrap; gap: 5px; }
 .vc-keymap em { font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #172720; color: #b5c7bf; }

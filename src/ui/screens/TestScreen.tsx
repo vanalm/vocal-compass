@@ -207,7 +207,7 @@ export function TestScreen({
               <h3>Listen</h3>
               <p>{runner.prompt}</p>
               <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? "Listening…"} />
-              {showMap && trial && <KeyMap trial={trial} />}
+              {showMap && trial && <KeyMap trial={trial} sounding={runner.cueMidi} />}
             </div>
           )}
 
@@ -216,7 +216,7 @@ export function TestScreen({
               <h3>{runner.cuePlaying ? "Listen" : trial.delayMs > 0 ? "Hold it" : "Get ready"}</h3>
               <p>{runner.prompt}</p>
               <CueIndicator playing={runner.cuePlaying} label={runner.cueLabel ?? "Listening…"} />
-              {showMap && trial && <KeyMap trial={trial} />}
+              {showMap && trial && <KeyMap trial={trial} sounding={runner.cueMidi} />}
               {trial.delayMs > 0 && !runner.cuePlaying && (
                 <>
                   <div className="vc-countdown" aria-hidden="true">
@@ -234,7 +234,7 @@ export function TestScreen({
             <div className="vc-prompt vc-phase-block">
               <h3 className="vc-sing-now">Sing</h3>
               <p>{runner.prompt}</p>
-              {showMap && <KeyMap trial={trial} />}
+              {showMap && <KeyMap trial={trial} sounding={trial.targetMidi} />}
               <MicMeter level={runner.inputLevel} threshold={runner.noiseThreshold} sample={runner.liveSample} />
               <p className="vc-small">One note, held steady. Recording stops on its own (space ends it early).</p>
             </div>
@@ -261,8 +261,6 @@ export function TestScreen({
                 </div>
               </div>
               <p className="vc-explanation">{analysis.explanation}</p>
-              {showMap && trial && <KeyMap trial={trial} sungMidi={analysis.selectedMidi} />}
-              <TrialSummary record={fromSession(runner.session)} />
 
               {nextStep && nextExercise && (
                 <div className="vc-upnext">
@@ -281,6 +279,8 @@ export function TestScreen({
                   Retry (this one won’t count)
                 </button>
               </div>
+              {showMap && trial && <KeyMap trial={trial} sungMidi={analysis.selectedMidi} />}
+              <TrialSummary record={fromSession(runner.session)} />
             </div>
           )}
         </section>

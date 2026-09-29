@@ -62,6 +62,8 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
   const [cuePlaying, setCuePlaying] = useState(false);
   /** What the tone sounding right now is — every tone is named on screen. */
   const [cueLabel, setCueLabel] = useState<string | null>(null);
+  /** The note sounding right now (the home note during the chord), so a map can light its place. */
+  const [cueMidi, setCueMidi] = useState<number | null>(null);
   const [prompt, setPrompt] = useState("");
   const [remainingDelayMs, setRemainingDelayMs] = useState(0);
   const [liveSample, setLiveSample] = useState<PitchSample | null>(null);
@@ -101,16 +103,19 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     setCuePlaying(true);
     if (plan.playCadence) {
       setCueLabel(HOME_CHORD_LABEL);
+      setCueMidi(definition.tonicMidi);
       await cues.playCadence(definition.tonicMidi);
     }
     for (let i = 0; i < plan.contextMidis.length; i += 1) {
       if (runRef.current !== run) return false;
       setCueLabel(plan.cueLabels[i] ?? null);
+      setCueMidi(plan.contextMidis[i]);
       await cues.playSequence([plan.contextMidis[i]]);
     }
     if (runRef.current !== run) return false;
     setCuePlaying(false);
     setCueLabel(null);
+    setCueMidi(null);
     return true;
   };
 
@@ -221,10 +226,12 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     if (plan.playStartAtGo) {
       setCuePlaying(true);
       setCueLabel(plan.goLabel ?? null);
+      setCueMidi(session.definition.startMidi);
       await cues.playNote(session.definition.startMidi, 500);
       if (runRef.current !== run) return;
       setCuePlaying(false);
       setCueLabel(null);
+      setCueMidi(null);
     }
     session.beginSinging();
     setPhase("sing");
@@ -302,6 +309,7 @@ export function useTrialRunner(onSave: (record: TrialRecord) => Promise<void>, o
     setFlowMode,
     cuePlaying,
     cueLabel,
+    cueMidi,
     inputLevel,
     noiseThreshold,
     prompt,
