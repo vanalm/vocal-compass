@@ -69,6 +69,16 @@ jobs:
               dest.parent.mkdir(parents=True, exist_ok=True)
               dest.write_bytes(new)
           print(f'Verified and applied {len(pending)} reviewed source files.')
+      - name: Normalize two reviewed whitespace-only differences
+        shell: python
+        run: |
+          import hashlib, pathlib
+          p = pathlib.Path('docs/science-audit.md')
+          p.write_text(p.read_text().replace('  \n', '\n\n'))
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == '4538853ee3835f85350da0cb3dca7411f1857129530d2e646824bed142255221'
+          p = pathlib.Path('src/styles.css')
+          p.write_text(p.read_text().rstrip() + '\n')
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == 'bf5895e1671a4cd53e37e5ef3cd042b66e372288090ab11c31b3b924b9c47f5b'
       - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run build
