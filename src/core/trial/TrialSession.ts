@@ -3,6 +3,7 @@ import type {
   ErrorKind,
   FeedbackMode,
   IntentLabel,
+  MeasurementContext,
   LowCutSetting,
   PitchSample,
   RegisterLabel,
@@ -11,6 +12,7 @@ import type {
 } from "../types";
 import { AttemptClassifier } from "./AttemptClassifier";
 import { RescueLadder } from "./RescueLadder";
+import { PROTOCOL_VERSION, SCORING_VERSION } from "../science/evidence";
 
 export type TrialPhase = "ready" | "listen" | "imagine" | "sing" | "review";
 
@@ -23,6 +25,11 @@ export type TrialPhase = "ready" | "listen" | "imagine" | "sing" | "review";
  * knowledge: the UI feeds it events and samples.
  */
 export class TrialSession {
+  private readonly recordId = crypto.randomUUID();
+  private savedAt: string | null = null;
+  cueReplayCount = 0;
+  actualSilentMs: number | undefined;
+  measurement: MeasurementContext = { purpose: "practice", protocolVersion: PROTOCOL_VERSION, scoringVersion: SCORING_VERSION, firstTake: true, selfReportsCollected: true };
   private phase: TrialPhase = "ready";
   private samples: PitchSample[] = [];
   private levels: Array<{ t: number; rms: number }> = [];
@@ -67,7 +74,7 @@ export class TrialSession {
     return this.goAt;
   }
 
-  /** Go-signal to first voicing: the selection-latency KPI. */
+  /** Go-signal to first detected voice, not the time of a mental decision. */
   get selectionLatencyMs(): number | null {
     return this.goAt != null && this.firstVoicedAt != null ? Math.max(0, this.firstVoicedAt - this.goAt) : null;
   }
@@ -151,10 +158,13 @@ export class TrialSession {
     if (this.phase !== "review" || !this.analysis) {
       throw new Error("Trial is not reviewable yet.");
     }
-    const commitAt = this.firstVoicedAt ?? this.now();
+    this.savedAt ??= new Date(this.now()).toISOString();
     return {
       ...this.analysis,
-      id: crypto.randomUUID(),
+      id: this.recordId,
+      measurement: { ...this.measurement },
+      cueReplayCount: this.cueReplayCount,
+      actualSilentMs: this.actualSilentMs,
       definition: this.definition,
       feedbackMode: this.feedbackMode,
       hintLevel: this.rescue.hintLevel,
@@ -162,7 +172,8 @@ export class TrialSession {
       intent: this.intent,
       finalErrorKind: this.finalErrorKind(),
       selectionLatencyMs: this.selectionLatencyMs,
-      recoveryTimeMs: this.rescue.recoveryTime(commitAt),
+      // A first onset is not a verified correct restart. Do not fabricate recovery.
+      recoveryTimeMs: null,
       confidenceBefore: this.confidenceBefore,
       effort: this.effort,
       register: this.register,
@@ -171,7 +182,7 @@ export class TrialSession {
       levels: this.levelTrace,
       micLowCut: this.micLowCut,
       micInput: this.micInput,
-      createdAt: new Date().toISOString(),
+      createdAt: this.savedAt,
     };
   }
 

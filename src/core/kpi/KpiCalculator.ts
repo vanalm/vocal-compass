@@ -1,90 +1,36 @@
 import { median } from "../music/theory";
 import type { KpiSummary, TrialRecord } from "../types";
-
-/**
- * KPI engine (PRD §12). Deliberately never emits one "singing score":
- * destination selection, availability, latency, hints, loss, and recovery
- * are reported separately.
- */
+/** Descriptive measurements. No inference about mental intent or treatment efficacy. */
 export class KpiCalculator {
-  summarize(trials: TrialRecord[]): KpiSummary {
-    const scored = trials.filter((t) => t.scored);
-    const correct = scored.filter((t) => t.destinationMatch && t.finalErrorKind === "success");
-    const independent = correct.filter((t) => t.hintLevel === 0);
-    const latencies = scored
-      .map((t) => t.selectionLatencyMs)
-      .filter((v): v is number => v != null);
-    const recoveries = scored
-      .map((t) => t.recoveryTimeMs)
-      .filter((v): v is number => v != null);
-    const correctResiduals = correct
-      .map((t) => t.targetErrorCents)
-      .filter((v): v is number => v != null)
-      .map(Math.abs);
-    const available = scored.filter(
-      (t) => !t.lostEvent && t.finalErrorKind !== "no-target",
-    );
-
-    return {
-      total: trials.length,
-      scored: scored.length,
-      destinationAccuracy: ratio(correct.length, scored.length),
-      independentAccuracy: ratio(independent.length, scored.length),
-      availabilityRate: ratio(available.length, scored.length),
-      medianLatencyMs: median(latencies),
-      hintRate: ratio(scored.filter((t) => t.hintLevel > 0).length, scored.length),
-      mapLossRate: ratio(
-        scored.filter((t) => t.lostEvent || t.finalErrorKind === "no-target").length,
-        scored.length,
-      ),
-      medianRecoveryMs: median(recoveries),
-      correctTargetMedianResidual: median(correctResiduals),
-    };
+ summarize(trials:TrialRecord[]):KpiSummary {
+  const scored=trials.filter(t=>t.scored), correct=scored.filter(t=>t.destinationMatch);
+  const independent=correct.filter(t=>t.feedbackMode==="blind"&&t.hintLevel===0&&t.cueReplayCount===0);
+  return {total:trials.length,scored:scored.length,destinationAccuracy:ratio(correct.length,scored.length),
+   independentAccuracy:ratio(independent.length,scored.length),
+   // Retained for schema compatibility. Absence of a loss report is not availability.
+   availabilityRate:0,
+   medianLatencyMs:median(scored.map(t=>t.selectionLatencyMs).filter(finite)),
+   hintRate:ratio(trials.filter(t=>t.hintLevel>0||(t.cueReplayCount??0)>0).length,trials.length),
+   mapLossRate:ratio(trials.filter(t=>t.lostEvent||t.intent==="no-target"||t.finalErrorKind==="no-target").length,trials.length),
+   // Older recovery fields measured onset, not a correct restart. Do not aggregate them.
+   medianRecoveryMs:null,
+   correctTargetMedianResidual:median(correct.map(t=>t.targetErrorCents).filter(finite).map(Math.abs))};
+ }
+ byExercise(trials:TrialRecord[]):Map<string,KpiSummary>{const groups=new Map<string,TrialRecord[]>();for(const t of trials){const a=groups.get(t.definition.exerciseId)??[];a.push(t);groups.set(t.definition.exerciseId,a);}return new Map([...groups].map(([id,ts])=>[id,this.summarize(ts)]));}
+ /** Only Silent Map, blind, without replay or hints. Other conditions need separate contrasts. */
+ byDelay(trials:TrialRecord[]):Array<{delayMs:number;accuracy:number;n:number}>{
+  const groups=new Map<number,TrialRecord[]>();
+  for(const t of trials.filter(t=>t.scored&&t.definition.exerciseId==="silent"&&t.feedbackMode==="blind"&&t.hintLevel===0&&t.cueReplayCount===0)){
+   const a=groups.get(t.definition.delayMs)??[];a.push(t);groups.set(t.definition.delayMs,a);
   }
-
-  /** Accuracy by exercise id, for the Today recommender and Progress charts. */
-  byExercise(trials: TrialRecord[]): Map<string, KpiSummary> {
-    const groups = new Map<string, TrialRecord[]>();
-    for (const t of trials) {
-      const list = groups.get(t.definition.exerciseId) ?? [];
-      list.push(t);
-      groups.set(t.definition.exerciseId, list);
-    }
-    return new Map([...groups].map(([id, list]) => [id, this.summarize(list)]));
-  }
-
-  /** Retention curve: destination accuracy bucketed by silent delay. */
-  byDelay(trials: TrialRecord[]): Array<{ delayMs: number; accuracy: number; n: number }> {
-    const groups = new Map<number, TrialRecord[]>();
-    for (const t of trials.filter((t) => t.scored)) {
-      const list = groups.get(t.definition.delayMs) ?? [];
-      list.push(t);
-      groups.set(t.definition.delayMs, list);
-    }
-    return [...groups]
-      .map(([delayMs, list]) => ({
-        delayMs,
-        accuracy: ratio(list.filter((t) => t.finalErrorKind === "success").length, list.length),
-        n: list.length,
-      }))
-      .sort((a, b) => a.delayMs - b.delayMs);
-  }
-
-  /** Rolling destination accuracy over recent sessions for the trend chart. */
-  trend(trials: TrialRecord[], bucketSize = 10): Array<{ index: number; accuracy: number }> {
-    const scored = trials.filter((t) => t.scored);
-    const points: Array<{ index: number; accuracy: number }> = [];
-    for (let i = 0; i < scored.length; i += bucketSize) {
-      const bucket = scored.slice(i, i + bucketSize);
-      points.push({
-        index: points.length,
-        accuracy: ratio(bucket.filter((t) => t.finalErrorKind === "success").length, bucket.length),
-      });
-    }
-    return points;
-  }
+  return [...groups].map(([delayMs,ts])=>({delayMs,accuracy:ratio(ts.filter(t=>t.destinationMatch).length,ts.length),n:ts.length})).sort((a,b)=>a.delayMs-b.delayMs);
+ }
+ /** Descriptive nonoverlapping buckets. Never used as a matched progress comparison. */
+ trend(trials:TrialRecord[],bucketSize=10):Array<{index:number;accuracy:number}>{
+  if(!Number.isInteger(bucketSize)||bucketSize<1)throw new Error("Invalid bucket size");
+  const ts=trials.filter(t=>t.scored).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+  const out=[];for(let i=0;i<ts.length;i+=bucketSize){const a=ts.slice(i,i+bucketSize);out.push({index:out.length,accuracy:ratio(a.filter(t=>t.destinationMatch).length,a.length)});}return out;
+ }
 }
-
-function ratio(numerator: number, denominator: number): number {
-  return denominator ? numerator / denominator : 0;
-}
+function ratio(n:number,d:number){return d?n/d:0;}
+function finite(v:number|null|undefined):v is number{return v!=null&&Number.isFinite(v);}

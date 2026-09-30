@@ -1,79 +1,15 @@
-import { describe, expect, it } from "vitest";
-import {
-  vocalFunctionExercises,
-  rangeChangeVerdict,
-  MEANINGFUL_RANGE_CHANGE_ST,
-  MEASUREMENT_DRIFT_ST,
-} from "../src/core/protocol/rangePlan";
-
-describe("vocalFunctionExercises", () => {
-  const plan = vocalFunctionExercises();
-
-  it("is the Stemple VFE sequence, in order", () => {
-    expect(plan.steps.map((s) => s.id)).toEqual(["warmup", "stretch", "contract", "power"]);
-  });
-
-  it("gives each step exactly one what sentence and one why sentence", () => {
-    for (const step of plan.steps) {
-      for (const line of [step.what, step.why]) {
-        expect(line.trim().endsWith(".")).toBe(true);
-        expect(line.replace(/\.$/, "").includes(".")).toBe(false);
-        expect(line.length).toBeGreaterThan(15);
-      }
-    }
-  });
-
-  it("cites the evidence behind each step rather than asserting it", () => {
-    for (const step of plan.steps) {
-      expect(step.evidence.length).toBeGreaterThan(10);
-    }
-  });
-
-  it("prescribes a semi-occluded posture, which is the load-bearing part", () => {
-    expect(plan.steps.every((s) => s.sovt)).toBe(true);
-  });
-
-  it("carries the trial-backed dose, twice daily", () => {
-    expect(plan.repsPerExercise).toBe(2);
-    expect(plan.timesPerDay).toBe(2);
-    expect(plan.weeksToEffect).toBeGreaterThanOrEqual(4);
-  });
-
-  it("caps each step so a tool that cannot hear strain still bounds the load", () => {
-    for (const step of plan.steps) {
-      expect(step.maxSeconds).toBeGreaterThan(0);
-      expect(step.maxSeconds).toBeLessThanOrEqual(60);
-    }
-  });
+import { describe,expect,it } from "vitest";
+import { vocalFunctionExercises,rangeChangeVerdict,MEANINGFUL_RANGE_CHANGE_ST,MEASUREMENT_DRIFT_ST } from "../src/core/protocol/rangePlan";
+describe("Optional exploration, not substituted VFE",()=>{
+ const plan=vocalFunctionExercises();
+ it("has a separate versioned identity from previously prescribed VFE",()=>{expect(plan.id).toBe("gentle-exploration-v2");expect(plan.title).toMatch(/optional/i);});
+ it("has instructions, rationale and a limitation for each step",()=>{for(const s of plan.steps){expect(s.what.length).toBeGreaterThan(25);expect(s.why.length).toBeGreaterThan(20);expect(s.evidence.length).toBeGreaterThan(30);}});
+ it("does not prescribe a dose or promise time to effect",()=>{expect(plan.timesPerDay).toBe(0);expect(plan.weeksToEffect).toBe(0);});
+ it("includes rest and brief rather than maximum phonation",()=>{expect(plan.steps.some(s=>!s.sovt)).toBe(true);expect(plan.steps.filter(s=>s.sovt).every(s=>s.maxSeconds<=5)).toBe(true);});
+ it("does not train the highest possible note",()=>{expect(plan.steps.find(s=>s.id==="stretch")!.what).toMatch(/Do not aim for your highest note/);});
 });
-
-describe("rangeChangeVerdict", () => {
-  it("calls a sub-threshold gain indistinguishable from noise", () => {
-    const v = rangeChangeVerdict(20, 21.4);
-    expect(v.deltaSemitones).toBeCloseTo(1.4, 5);
-    expect(v.meaningful).toBe(false);
-    expect(v.label).toMatch(/noise|practice/i);
-  });
-
-  it("calls a gain at or beyond the threshold meaningful", () => {
-    const v = rangeChangeVerdict(20, 23);
-    expect(v.meaningful).toBe(true);
-    expect(v.direction).toBe("up");
-  });
-
-  it("flags a real LOSS of range, which is a health signal not a plateau", () => {
-    const v = rangeChangeVerdict(24, 20);
-    expect(v.meaningful).toBe(true);
-    expect(v.direction).toBe("down");
-    expect(v.label).toMatch(/clinician|doctor|check/i);
-  });
-
-  it("treats no change as no change", () => {
-    expect(rangeChangeVerdict(20, 20).direction).toBe("flat");
-  });
-
-  it("exposes the constants it judges against", () => {
-    expect(MEASUREMENT_DRIFT_ST).toBeCloseTo(1.4, 5);
-    expect(MEANINGFUL_RANGE_CHANGE_ST).toBeGreaterThanOrEqual(3);
-  });
+describe("Observed range movement",()=>{
+ it.each([1.4,3,5,-1,-4])("does not certify %s semitones as real change",delta=>{const v=rangeChangeVerdict(20,20+delta);expect(v.deltaSemitones).toBeCloseTo(delta);expect(v.meaningful).toBe(false);expect(v.label).toMatch(/observed/i);expect(v.label).toMatch(/no individual meaningful-change threshold/i);});
+ it("preserves direction",()=>{expect(rangeChangeVerdict(20,22).direction).toBe("up");expect(rangeChangeVerdict(20,18).direction).toBe("down");expect(rangeChangeVerdict(20,20).direction).toBe("flat");});
+ it("does not convert group retest bias into an individual cutoff",()=>{expect(MEASUREMENT_DRIFT_ST).toBe(1.4);expect(MEANINGFUL_RANGE_CHANGE_ST).toBeNull();});
 });

@@ -68,7 +68,7 @@ describe("TrialSession state machine", () => {
     expect(() => session.toRecord()).toThrow();
   });
 
-  it("tracks rescue level, lost event, and recovery time", () => {
+  it("tracks support and loss without equating first onset with recovery", () => {
     const now = { t: 0 };
     const session = makeSession(now);
     session.beginListening();
@@ -87,7 +87,7 @@ describe("TrialSession state machine", () => {
     const record = session.toRecord();
     expect(record.hintLevel).toBe(3);
     expect(record.lostEvent).toBe(true);
-    expect(record.recoveryTimeMs).toBe(2000); // 2500 (first voiced) - 500 (lost)
+    expect(record.recoveryTimeMs).toBeNull(); // First onset does not establish a correct restart.
   });
 
   it("intent confirmation flows into the final label", () => {
@@ -129,3 +129,13 @@ describe("volume data in the trace", () => {
     expect(record.trace[0].rms).toBeCloseTo(0.042, 5);
   });
 });
+
+describe("Audit: retrying a save is not a new attempt",()=>{
+ it("keeps the same record ID and timestamp through repeated serialization",()=>{
+  const now={t:0},s=makeSession(now);s.beginListening();s.beginImagining();s.beginSinging();
+  holdForTest(s);s.finishSinging();const a=s.toRecord();now.t=9000;const b=s.toRecord();
+  expect(b.id).toBe(a.id);expect(b.createdAt).toBe(a.createdAt);
+  expect(a.measurement?.purpose).toBe("practice");expect(a.measurement?.scoringVersion).toBe("stable-center-2");
+ });
+});
+function holdForTest(s:TrialSession){for(let i=0;i<8;i++)s.addSample(voicedSample(s.definition.targetMidi,100+i*80));}

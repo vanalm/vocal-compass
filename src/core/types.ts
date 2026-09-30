@@ -66,9 +66,26 @@ export interface AttemptAnalysis {
   explanation: string;
 }
 
+/** Measurement provenance is additive. Absence means legacy, never a verified check-in. */
+export interface MeasurementContext {
+  purpose: "practice" | "checkin";
+  protocolVersion: string;
+  scoringVersion: string;
+  blockId?: string;
+  itemIndex?: number;
+  itemCount?: number;
+  formId?: string;
+  anchorMidi?: number;
+  firstTake: boolean;
+  selfReportsCollected: boolean;
+}
+
 /** The persisted record: acoustics + context + user confirmation. */
 export interface TrialRecord extends AttemptAnalysis {
   id: string;
+  measurement?: MeasurementContext;
+  cueReplayCount?: number;
+  actualSilentMs?: number;
   definition: TrialDefinition;
   feedbackMode: FeedbackMode;
   hintLevel: number;

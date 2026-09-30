@@ -1,78 +1,39 @@
-import { RECOVERY_SCRIPT, RESCUE_LEVELS } from "../../core";
-
-const WEEKS = [
-  { period: "Baselines", focus: "Monitoring, echo, silent retention, route selection, load, register, recovery → your personal bottleneck report." },
-  { period: "Weeks 1–2", focus: "Tonal north, steps and thirds, explicit use of “I’m lost” before searching. Goal: higher availability, lower map-loss rate." },
-  { period: "Weeks 3–4", focus: "Fourths/fifths, multiple keys, 3–5 s delays, feedback faded after commitment. Goal: faster independent selection." },
-  { period: "Weeks 5–6", focus: "Missing notes, phrase landmarks, neutral-syllable → lyrics transfer. Goal: the target survives inside real phrases." },
-  { period: "Weeks 7–8", focus: "Register zones and accompaniment — separate load effects from register effects." },
-  { period: "Weeks 9–10", focus: "Countdowns, interruptions, no-restart takes. Goal: recovery becomes fast and procedural." },
-  { period: "Weeks 11–12", focus: "Two personally meaningful song passages, blind retests on different days." },
-];
-
+import { useEffect, useState } from "react";
+import { DECISIONS, EVIDENCE, REVIEW_DATE } from "../../core/science/evidence";
+import { EvidenceCard, EvidenceCards } from "../components/EvidenceCards";
 export function ProtocolScreen() {
-  return (
-    <div className="vc-protocol">
-      <div className="vc-protocol-main">
-        <section className="vc-card vc-prose">
-          <h2>How this training works</h2>
-          <p>
-            Most pitch tools ask one question: how far was the sung pitch from the expected frequency?
-            Vocal Compass asks two independent ones: <strong>which musical destination did you select</strong>,
-            and <strong>how well did your voice land on that selected destination?</strong> A clean landing on
-            the wrong note is a selection error, not a vocal-control error — and they are trained differently.
-          </p>
-          <h3>The loop</h3>
-          <p>Hear → imagine → commit → sing → inspect → classify → retry.</p>
-          <p>
-            Live pitch is usually hidden until you commit. A continuously visible tuner line can train the
-            exact habit being eliminated: using the voice to hunt for a destination that should first exist
-            internally.
-          </p>
-          <h3>When you’re lost</h3>
-          <p>{RECOVERY_SCRIPT}</p>
-          <ul>
-            {RESCUE_LEVELS.map((l) => (
-              <li key={l.level}>
-                <strong>Level {l.level} — {l.title}:</strong> {l.gives}. Preserves {l.preserves.toLowerCase()}.
-              </li>
-            ))}
-          </ul>
-          <p>
-            Requesting the smallest useful hint is successful metacognition, not a failed trial — but the
-            level used is recorded, and progress means needing less of it.
-          </p>
-          <h3>Cadence</h3>
-          <p>
-            Four 15-minute sessions per week. Voice safety outranks streaks: pain ends the session,
-            hoarseness shifts you to listening work, and effort above 3/5 pauses that register zone.
-          </p>
-        </section>
-
-        <section className="vc-card vc-prose">
-          <h2>Twelve-week sequence</h2>
-          <div className="vc-roadmap">
-            {WEEKS.map((w) => (
-              <div className="vc-roadmap-item" key={w.period}>
-                <strong>{w.period}</strong>
-                <p>{w.focus}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <aside className="vc-card vc-panel vc-sticky">
-        <span className="vc-label">Session recipe (15 min)</span>
-        <div className="vc-help-list">
-          <div className="vc-help"><strong>1. Voice check + easy calibration</strong><p>1.5 min — Direct echo in live mode.</p></div>
-          <div className="vc-help"><strong>2. Weakest selection cell</strong><p>4 min — whatever Today recommends.</p></div>
-          <div className="vc-help"><strong>3. Audiation work</strong><p>4 min — Silent map or Missing note.</p></div>
-          <div className="vc-help"><strong>4. Transfer</strong><p>3 min — the same route in a new key.</p></div>
-          <div className="vc-help"><strong>5. Recovery practice</strong><p>1.5 min — one deliberate “I’m lost”, rescued by ladder.</p></div>
-          <div className="vc-help"><strong>6. Save + debrief</strong><p>1 min — check Progress for what changed.</p></div>
-        </div>
-      </aside>
-    </div>
-  );
+ const [query, setQuery] = useState("");
+ const readTab=()=>{const value=window.location.hash.split("/")[1];return ["method","decisions","sources","measurement","safety"].includes(value)?value:"method";};
+ const [tab, setTabState] = useState(readTab);
+ const setTab=(value:string)=>{setTabState(value);window.location.hash=`guide/${value}`;};
+ useEffect(()=>{const update=()=>setTabState(readTab());window.addEventListener("hashchange",update);return()=>window.removeEventListener("hashchange",update);},[]);
+ const results = EVIDENCE.filter(s => JSON.stringify(s).toLowerCase().includes(query.toLowerCase()));
+ return <div className="vc-guide-page">
+  <header className="vc-page-heading"><span className="vc-eyebrow">The guide</span><h2>Understand the practice.</h2><p>The goal is a reliable next note, an easier musical phrase, and evidence you can inspect. Not a better-looking score.</p></header>
+  <div className="vc-tabs" role="group" aria-label="Guide sections">{[["method","Method"],["decisions","Why this path"],["sources","Research library"],["measurement","Reading progress"],["safety","Voice & data"]].map(([id,label])=><button key={id} className={tab===id?"active":""} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</div>
+  {tab==="method" && <>
+   <section className="vc-card vc-card-pad"><h3>Three things we are trying to improve</h3><div className="vc-three-up"><div><span className="vc-step-number">01</span><h4>Find the note</h4><p>Hear a model, form a destination, then sing. Separate the note you produced from the note you meant.</p></div><div><span className="vc-step-number">02</span><h4>Keep it available</h4><p>Try a short silent delay or a scale-pattern continuation. Learn which conditions are difficult without assuming why.</p></div><div><span className="vc-step-number">03</span><h4>Use it in music</h4><p>Return to a real phrase. Track comfort and repeatability with lyrics and guitar—not just isolated pitch.</p></div></div></section>
+   <section className="vc-card vc-card-pad"><h3>Your practice loop</h3><p className="vc-loop">Listen → imagine → sing → review → try again</p><p>Use a neutral syllable and an easy range. Live mode offers guidance; after-trial mode withholds the display. “I’m lost” opens a graded rescue. Asking for help is useful information, not a penalty.</p><p>Start with a short check-in, then choose one question to train. For example: does the note disappear after silence, or is immediate matching also difficult?</p></section>
+   <section className="vc-card vc-card-pad"><h3>A flexible eight-week experiment</h3><p className="vc-notice">The duration and dose are design choices, not validated prescriptions. There is no promised percentage gain or range increase.</p><div className="vc-roadmap">{[
+    ["Start","Check the microphone; choose a comfortable key; complete a first check-in. Repeat on another day before interpreting a pattern."],
+    ["Weeks 1–2","Practice one difficult task in short sessions. A suggested ceiling is 15 minutes, four days a week; less is acceptable."],
+    ["Weeks 3–4","Vary one condition at a time. Review comparable check-ins. If nothing changes, reconsider the task, feedback or need for teaching."],
+    ["Weeks 5–6","Use phrases in Quest and outside the app. Compare a neutral syllable with lyrics before adding guitar."],
+    ["Weeks 7–8","Repeat the check-in on separate days. Try an unpracticed musical phrase. Decide what to keep based on comfort, independence and transfer."],
+   ].map(([period,focus])=><div key={period} className="vc-roadmap-item"><strong>{period}</strong><p>{focus}</p></div>)}</div><p>Optional weeks 9–12 extend the experiment; they are not a second conflicting protocol. The app does not yet automate song import or controlled guitar-load comparisons.</p></section>
+  </>}
+  {tab==="decisions" && <><p className="vc-small">Our choices are reversible. Evidence informs them; it does not establish that this app is better than lessons or other approaches.</p>{DECISIONS.map(d=><section key={d.title} className="vc-card vc-card-pad"><h3>{d.title}</h3><dl className="vc-decision"><div><dt>Chosen path</dt><dd>{d.chosen}</dd></div><div><dt>Reason</dt><dd>{d.why}</dd></div><div><dt>Other paths</dt><dd>{d.alternatives}</dd></div><div><dt>When to change course</dt><dd>{d.revisit}</dd></div></dl><EvidenceCards ids={d.refs}/></section>)}</>}
+  {tab==="sources" && <section className="vc-card vc-card-pad"><h3>Evidence, with its limits</h3><p>Targeted review of primary research and public-health guidance, last checked {REVIEW_DATE}. Not a systematic review. Abstract-only access is marked; unverified numerical effect sizes are not carried forward.</p><label className="vc-search-label" htmlFor="research-search">Find a topic, author or DOI</label><input id="research-search" type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Try imagery, feedback, lyrics or range"/><p className="vc-small" role="status">{results.length} sources</p>{results.map(s=><EvidenceCard key={s.id} source={s}/>)}{!results.length&&<p>No matching sources. Try a broader word.</p>}</section>}
+  {tab==="measurement" && <section className="vc-card vc-card-pad vc-prose"><h3>What counts as progress?</h3><p><strong>A change on comparable tasks, reproduced across days, that helps your music.</strong> A practice score alone is not evidence of lasting learning.</p><dl className="vc-decision">
+   <div><dt>First-note hit</dt><dd>The first stable detected note matches the requested equal-tempered note. This observes sound, not intention. The scoring thresholds are engineering choices, not clinical cutoffs.</dd></div>
+   <div><dt>Cents</dt><dd>100 cents is one semitone. Off-center measures distance from an estimated note center; it is not a complete measure of singing quality or style.</dd></div>
+   <div><dt>Check-ins</dt><dd>Fixed, versioned 15-item blocks; no live pitch, hints or per-trial results. Every completed first attempt is saved, including unscored captures. Three items per module provide a preliminary snapshot, not a diagnosis. Repeated items can become familiar.</dd></div>
+   <div><dt>Fair comparisons</dt><dd>Complete blocks must share form, key, item list, scoring version, microphone and filter. Different-day repeats reduce—but do not remove—fatigue, warm-up, practice and device effects. They do not establish causality.</dd></div>
+   <div><dt>Uncertainty</dt><dd>Rates show hits / scorable attempts, capture coverage and descriptive 95% Wilson intervals. These assume independent binary observations; repeated tasks within a person may be correlated. The intervals are not an individual measurement-error calibration or a significance test.</dd></div>
+   <div><dt>Latency</dt><dd>Time from the go signal to first detected voice, including device and onset-detection effects. It is not a direct measurement of how long you took to think of the note.</dd></div>
+   <div><dt>Unscored and older records</dt><dd>Unscored means the signal did not meet the scoring rule, not that you failed. Older records lack check-in provenance and remain visible as legacy practice; they are not retroactively verified.</dd></div>
+   <div><dt>Range</dt><dd>Detected held notes are not necessarily comfortable, stylistically useful, repeatable or belted. Method changes and retest familiarity can alter the span. There is no validated three-semitone meaningful-change threshold for this app.</dd></div>
+  </dl><p>A personal change does not demonstrate that the app caused it. Teacher observations and real-song recordings made with your consent can provide complementary evidence.</p></section>}
+  {tab==="safety" && <section className="vc-card vc-card-pad"><h3>Comfort before completion</h3><p>Do not sing through pain, hoarseness, fatigue or strain. Choose listening or reading instead. The readiness gate pauses singing when you report a voice concern; it cannot detect one for you.</p><p>Persistent or concerning changes, including losing high notes you previously had, warrant a qualified clinician’s advice. Range technique belongs with an appropriately qualified voice professional, not an automated high-note challenge.</p><EvidenceCards ids={["voice-care","vfe","dose","repeatability"]}/><h3>Your data</h3><p>Practice is stored in this browser. Raw audio is not saved by the standard exercises; pitch traces, timing and self-reports are. An optional account syncs practice records through the app’s server. Local goal preferences are device-only.</p><p>Export JSON for a backup. Clearing browser storage can remove unsynced practice. Deleting a trial records a tombstone so sync cannot restore it; account deletion is separate from clearing this device.</p><p>The shipped pitch estimator is MPM through pitchy, with a lightweight autocorrelation alternative in the code. Neither synthetic tests nor a detector name validate your microphone, room, vocal timbre, register or fine-grained cents measurements.</p></section>}
+ </div>;
 }

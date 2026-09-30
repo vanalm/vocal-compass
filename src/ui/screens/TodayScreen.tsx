@@ -1,107 +1,16 @@
-import {
-  localDateKey,
-  nextActions,
-  practiceDays,
-  type ExerciseSession,
-  type Lane,
-  type PhraseRecord,
-  type RangeMeasurement,
-  type TrialRecord,
-} from "../../core";
-import { useServices } from "../services";
-import { KpiCards } from "../components/KpiCards";
-import { NextUpCard } from "../components/NextUpCard";
-
-/**
- * The landing page answers one question — "where do I pick up?" — with the
- * same planner the Progress screen uses. The pitch lives in one line; the
- * work lives in the button.
- */
-export function TodayScreen({
-  trials,
-  ranges,
-  sessions,
-  phraseRecords,
-  onGo,
-}: {
-  trials: TrialRecord[];
-  ranges: RangeMeasurement[];
-  sessions: ExerciseSession[];
-  phraseRecords: PhraseRecord[];
-  onGo: (lane: Lane) => void;
-}) {
-  const { kpi } = useServices();
-  const summary = kpi.summarize(trials);
-  const lanes = nextActions(new Date(), trials, ranges, sessions);
-
-  const today = new Date();
-  const days = practiceDays([
-    ...trials.map((t) => t.createdAt),
-    ...ranges.map((r) => r.createdAt),
-    ...sessions.map((s) => s.createdAt),
-    ...phraseRecords.map((r) => r.createdAt),
-  ]);
-  const minutesToday = days.find((d) => d.date === localDateKey(today.getTime()))?.minutes ?? 0;
-  const weekDays = days.filter((d) => {
-    const then = new Date(`${d.date}T12:00:00`);
-    return (today.getTime() - then.getTime()) / 86_400_000 < 7;
-  }).length;
-
-  return (
-    <div className="vc-grid">
-      <section className="vc-card vc-hero">
-        <div className="vc-hero-content">
-          <span className="vc-eyebrow">
-            <span className="vc-dot" /> Today
-          </span>
-          <h2>Measure. Train. Verify.</h2>
-          <p className="vc-today-sub">
-            Science-backed singing practice: every exercise is measured, feedback follows the
-            evidence, and progress only counts against your own baseline.
-          </p>
-          <p className="vc-today-status">
-            Active {weekDays} day{weekDays === 1 ? "" : "s"} this week
-            {minutesToday > 0 ? ` · ${minutesToday} min today` : " · nothing yet today"}
-            {summary.total > 0 ? ` · ${summary.total} trials saved` : ""}
-          </p>
-        </div>
-      </section>
-
-      <section className="vc-card vc-side" style={{ gridColumn: "span 12" }}>
-        <NextUpCard lanes={lanes} onGo={onGo} />
-      </section>
-
-      <section className="vc-card vc-side" style={{ gridColumn: "span 12" }}>
-        <div className="vc-section-title">
-          <h3>Your numbers</h3>
-          <p>{summary.total} trials saved</p>
-        </div>
-        <KpiCards summary={summary} />
-      </section>
-
-      <section className="vc-card vc-howto" style={{ gridColumn: "span 12" }}>
-        <div className="vc-howto-steps">
-          <div>
-            <strong>1 · Test</strong>
-            <p>15 guided trials, blind — the baseline everything is measured against.</p>
-          </div>
-          <div>
-            <strong>2 · Practice</strong>
-            <p>Short daily work: pitch trials, phrases in Quest, range exercises.</p>
-          </div>
-          <div>
-            <strong>3 · Progress</strong>
-            <p>Charts compare you only to your own baseline — and say when a change is real.</p>
-          </div>
-        </div>
-        <ul className="vc-principles">
-          <li>Every attempt is measured. Numbers, not impressions.</li>
-          <li>Feedback follows the evidence: guides help early, fade as you pass, and measurement is blind.</li>
-          <li>Verified means cold — first take, no guide. Retries improve practice numbers only.</li>
-          <li>A change must beat measurement noise before it is called a change.</li>
-          <li>The mic hears pitch and timing, not strain. Comfort is the limit; ease beats loudness.</li>
-        </ul>
-      </section>
-    </div>
-  );
+import { type ExerciseSession,type Lane,type PhraseRecord,type RangeMeasurement,type TrialRecord } from "../../core";
+import { checkinBlocks, comparableCheckins } from "../../core/measurement/checkins";
+import { nextActions } from "../../core/protocol/nextActions";
+import { GoalCard } from "../components/GoalCard";
+export function TodayScreen({trials,ranges,sessions,phraseRecords,onGo}:{trials:TrialRecord[];ranges:RangeMeasurement[];sessions:ExerciseSession[];phraseRecords:PhraseRecord[];onGo:(lane:Lane)=>void}){
+ const blocks=checkinBlocks(trials),complete=blocks.filter(b=>b.complete),last=complete.at(-1),comparison=comparableCheckins(trials);
+ const next=nextActions(new Date(),trials,ranges,sessions)[0];
+ const score=last?.score;
+ return <div className="vc-home">
+  <header className="vc-page-heading vc-home-heading"><span className="vc-eyebrow">A practice you can understand</span><h2>Know the note.<br/><span>Then make it yours.</span></h2><p>Find your next note, practice it with less help, and see what holds up on another day.</p></header>
+  <GoalCard/>
+  <section className="vc-card vc-next-session"><div><span className="vc-eyebrow">Start here</span><h3>{next.title}</h3><p>{next.detail}</p><p className="vc-small">Keep it brief · comfortable voice only · headphones for microphone work</p></div><button className="vc-button primary" onClick={()=>onGo(next.lane)}>{next.cta}<span aria-hidden="true"> →</span></button></section>
+  <section className="vc-home-stats" aria-label="Your current evidence"><div><span>Latest complete check-in</span><strong>{score?.value!=null?`${score.hits}/${score.n}`:"Not established"}</strong><p>{score?`${last!.attempted-score.n} unscored captures · first stable note`:`${complete.length} complete blocks; older practice is kept separately.`}</p></div><div><span>Across different days</span><strong>{comparison?"Ready to compare":"More evidence needed"}</strong><p>{comparison?"See the observed change and uncertainty in Progress.":"Repeat the same conditions on another day; one session is not a trend."}</p></div><div><span>Musical application</span><strong>{phraseRecords.length?`${phraseRecords.length} phrase attempts`:"Bring it to a phrase"}</strong><p>Use Quest for modeled phrases; then test your own music outside the app.</p></div></section>
+  <section className="vc-card vc-card-pad"><h3>What would count as progress?</h3><div className="vc-three-up"><div><h4>A more reliable first note</h4><p>More correct first stable notes under the same check-in conditions, with enough scorable captures.</p></div><div><h4>Less support</h4><p>A route still works without a replay or live display. A supported practice score is not the same result.</p></div><div><h4>Comfortable music</h4><p>The same phrase feels easier on different days, then holds together with words or guitar.</p></div></div><a className="vc-link" href="#guide">See the method, research and other paths →</a></section>
+ </div>;
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   compareRange,
   vocalFunctionExercises,
@@ -6,14 +6,10 @@ import {
   type RangeMeasurement,
 } from "../../core";
 import { RangeProbe } from "../components/RangeProbe";
+import { EvidenceCards } from "../components/EvidenceCards";
 import { RangeChart } from "../components/ProgressCharts";
 
-/**
- * The range area: measure honestly, train with the one program that has
- * trial evidence for expanding measured vocal capacity (Stemple's Vocal
- * Function Exercises), and judge change against measurement noise instead
- * of celebrating drift. Evidence: docs/range-training-evidence.md.
- */
+/** Observed range and optional exploration, not a technique diagnosis. */
 export function RangeScreen({
   ranges,
   onSaveRange,
@@ -26,6 +22,10 @@ export function RangeScreen({
   const plan = vocalFunctionExercises();
   const [done, setDone] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string|null>(null);
+  const pendingId = useRef<string|null>(null);
+  const saveLock = useRef(false);
 
   const comparison = ranges.length >= 2 ? compareRange(ranges[0], ranges[ranges.length - 1]) : null;
 
@@ -40,14 +40,14 @@ export function RangeScreen({
   };
 
   const saveSession = async () => {
-    await onSaveSession({
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      planId: plan.id,
-      stepsCompleted: done.size,
-    });
-    setDone(new Set());
-    setSaved(true);
+    if (saveLock.current || done.size === 0) return;
+    saveLock.current = true; setSaving(true); setSaveError(null);
+    pendingId.current ??= crypto.randomUUID();
+    try {
+      await onSaveSession({id:pendingId.current,createdAt:new Date().toISOString(),planId:plan.id,stepsCompleted:done.size});
+      pendingId.current=null; setDone(new Set()); setSaved(true);
+    } catch {setSaveError("This session is not saved yet. Retry saving before leaving.");}
+    finally {saveLock.current=false;setSaving(false);}
   };
 
   return (
@@ -57,8 +57,7 @@ export function RangeScreen({
           <h3>Measure</h3>
         </div>
         <p className="vc-small">
-          Measure about once a week. Repeat measurements drift about 1.4 semitones on their own, so a
-          real change has to clear about 3.
+          Measure only while your voice feels normal, using the same microphone and method. These are detected notes, not a certified usable or belted range. Repeatability matters more than one extreme.
         </p>
         <RangeChart ranges={ranges} />
         {comparison && (
@@ -82,13 +81,11 @@ export function RangeScreen({
         <div className="vc-section-title">
           <h3>{plan.title}</h3>
           <span className="vc-small">
-            {plan.timesPerDay}×/day · gains show at ~{plan.weeksToEffect} weeks
+            No prescribed dose or promised gain
           </span>
         </div>
         <p className="vc-small">
-          The one exercise program with randomized-trial evidence for expanding measured vocal
-          capacity — everything rides a lip trill, the gentlest gesture on the folds. Stop anything
-          that hurts; soft beats loud.
+          This brief optional routine is not the original Vocal Function Exercises protocol. It is not validated for range expansion. Skip it if you do not already find the gesture easy; work with a qualified teacher for range technique.
         </p>
         <div className="vc-vfe-steps">
           {plan.steps.map((step, i) => (
@@ -109,17 +106,16 @@ export function RangeScreen({
           ))}
         </div>
         <div className="vc-actions">
-          <button className="vc-button primary" disabled={done.size === 0} onClick={() => void saveSession()}>
+          <button className="vc-button primary" disabled={done.size === 0 || saving} onClick={() => void saveSession()}>
             Save session ({done.size}/{plan.steps.length} steps)
           </button>
+          {saveError && <p role="alert">{saveError}</p>}
           {saved && <span className="vc-small">Saved — counted toward today.</span>}
         </div>
         <p className="vc-small" style={{ marginTop: 10 }}>
-          Safety, honestly: software cannot hear strain, and self-judged effort is unreliable too —
-          the caps and the trill are the guardrails. Two hard days in a row is the risk pattern
-          (soreness lags 1–3 days). A real loss of range is a reason to see a clinician, not to
-          practice harder.
+          Stop for pain, strain, hoarseness or fatigue. Time caps and trills do not certify safety. Persistent or concerning changes, including losing familiar high notes, call for a qualified clinician’s advice—not harder practice.
         </p>
+        <EvidenceCards ids={["vfe", "dose", "repeatability", "voice-care"]}/>
       </section>
     </div>
   );

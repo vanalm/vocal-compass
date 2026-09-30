@@ -11,9 +11,8 @@ describe("kpiCards", () => {
     const unscored = [{ id: "t1", scored: false, hintLevel: 0 }] as unknown as TrialRecord[];
     const cards = values(unscored);
     for (const label of [
-      "Independent destination accuracy",
-      "Destination accuracy",
-      "Availability rate",
+      "Unguided first-note hits",
+      "First-note accuracy",
       "Map-loss rate",
       "Hint rate",
     ]) {
@@ -26,7 +25,7 @@ describe("kpiCards", () => {
       { id: "t1", scored: true, destinationMatch: true, finalErrorKind: "success", hintLevel: 0, lostEvent: false },
     ] as unknown as TrialRecord[];
     const cards = values(scored);
-    expect(cards["Destination accuracy"]).toEqual(["100%", "1 scored trials"]);
+    expect(cards["First-note accuracy"]).toEqual(["100%", "1 scored trials"]);
     expect(cards["Hint rate"]).toEqual(["0%", "trials needing rescue"]);
   });
 });

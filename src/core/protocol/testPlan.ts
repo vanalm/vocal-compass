@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from "../science/evidence";
 import type { FeedbackMode } from "../types";
 import type { Difficulty } from "../exercises/Exercise";
 
@@ -51,8 +52,8 @@ export function baselineTestPlan(): TestPlan {
     step("missing"),
   ];
   return {
-    id: "baseline",
-    title: "Baseline test",
+    id: PROTOCOL_VERSION,
+    title: "Check-in (preliminary)",
     steps,
     totalTrials: steps.reduce((n, s) => n + s.trialCount, 0),
   };

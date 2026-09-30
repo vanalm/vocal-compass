@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { noteName, type Exercise } from "../../core";
 import { useServices } from "../services";
+import { EvidenceCards } from "./EvidenceCards";
+import { evidenceFor, EXERCISE_REASON } from "../../core/science/evidence";
 import { Modal } from "./Modal";
 
 /** The ⓘ that opens an exercise's guide. */
@@ -52,9 +54,9 @@ export function GuideBrief({
           <dd>{guide.why}</dd>
         </div>
         <div>
-          <dt>In the brain</dt>
+          <dt>What we are testing</dt>
           <dd>
-            {guide.brain}{" "}
+            {EXERCISE_REASON[exercise.id]}{" "}
             <button type="button" className="vc-link" onClick={onInfo}>
               The research, and an example →
             </button>
@@ -275,16 +277,9 @@ export function ExerciseInfoModal({
       </section>
 
       <section>
-        <h3>The neuroscience</h3>
-        <p className="vc-guide-brain">{guide.brain}</p>
-        <ul className="vc-science">
-          {guide.science.map((note) => (
-            <li key={note.source}>
-              <p>{note.point}</p>
-              <cite>{note.source}</cite>
-            </li>
-          ))}
-        </ul>
+        <h3>Evidence and limits</h3>
+        <p>{EXERCISE_REASON[exercise.id]}</p>
+        <EvidenceCards ids={evidenceFor(exercise.id).map(s => s.id)}/>
       </section>
 
       <section>
@@ -302,8 +297,7 @@ export function ExerciseInfoModal({
           <div>
             <dt>You sang</dt>
             <dd>
-              The note your voice committed to in its first ~0.9 s: your brain's choice, before feedback
-              corrections take over.
+              The first locally stable pitch detected from your voice. This is an acoustic estimate, not a reading of your intention.
             </dd>
           </div>
           <div>
@@ -312,13 +306,12 @@ export function ExerciseInfoModal({
           </div>
           <div>
             <dt>Off-center</dt>
-            <dd>How far your voice sat from the note you chose, in cents (100 cents = one semitone).</dd>
+            <dd>How far the estimated center sat from its nearest equal-tempered note, in cents (100 cents = one semitone).</dd>
           </div>
           <div>
             <dt>So</dt>
             <dd>
-              Wrong note, clean landing: a choice problem (hearing and planning). Right note, far off-center: a
-              landing problem (vocal control). They're scored separately because they're trained differently.
+              An unexpected note could reflect target selection, vocal control or detection error. Your report helps choose the next practice question; the app cannot diagnose the cause from pitch alone.
             </dd>
           </div>
         </dl>

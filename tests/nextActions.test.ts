@@ -1,81 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe,expect,it } from "vitest";
 import { nextActions } from "../src/core/protocol/nextActions";
-import type { ExerciseSession, RangeMeasurement, TrialRecord } from "../src/core/types";
-
-const NOW = new Date(2026, 8, 10, 12, 0); // Sep 10, noon
-const daysAgo = (n: number, h = 10) => {
-  const d = new Date(NOW);
-  d.setDate(d.getDate() - n);
-  d.setHours(h, 0, 0, 0);
-  return d.toISOString();
-};
-
-const trial = (i: number, ago: number): TrialRecord =>
-  ({ id: `t${i}`, scored: true, createdAt: daysAgo(ago), definition: { targetMidi: 60 } }) as unknown as TrialRecord;
-const range = (id: string, ago: number): RangeMeasurement =>
-  ({ id, createdAt: daysAgo(ago), lowMidi: 48, highMidi: 70 });
-const session = (id: string, ago: number): ExerciseSession =>
-  ({ id, createdAt: daysAgo(ago), planId: "vfe", stepsCompleted: 4 });
-
-const manyTrials = (perDayAgo: number[]) =>
-  perDayAgo.flatMap((ago, d) => Array.from({ length: 5 }, (_, i) => trial(d * 10 + i, ago)));
-
-describe("nextActions", () => {
-  it("puts the baseline test first when it has never been completed", () => {
-    const lanes = nextActions(NOW, [], [], []);
-    expect(lanes[0].lane).toBe("test");
-    expect(lanes[0].due).toBe(true);
-  });
-
-  it("drops the test lane once enough trials exist", () => {
-    const lanes = nextActions(NOW, manyTrials([0, 1, 2]), [range("r", 1)], [session("s", 0, )]);
-    expect(lanes.find((l) => l.lane === "test")).toBeUndefined();
-  });
-
-  it("marks range exercises due today with zero overdue when done yesterday", () => {
-    const lanes = nextActions(NOW, manyTrials([0, 1, 2, 3]), [range("r", 1)], [session("s", 1)]);
-    const ex = lanes.find((l) => l.lane === "range-exercise")!;
-    expect(ex.due).toBe(true);
-    expect(ex.daysOverdue).toBe(0);
-  });
-
-  it("counts days overdue on the daily exercise cadence", () => {
-    const lanes = nextActions(NOW, manyTrials([0, 1]), [range("r", 1)], [session("s", 4)]);
-    const ex = lanes.find((l) => l.lane === "range-exercise")!;
-    expect(ex.daysOverdue).toBe(3);
-  });
-
-  it("is satisfied for today once a session is logged today", () => {
-    const lanes = nextActions(NOW, manyTrials([0, 1]), [range("r", 1)], [session("s", 0)]);
-    expect(lanes.find((l) => l.lane === "range-exercise")!.due).toBe(false);
-  });
-
-  it("flags pitch practice after two quiet days", () => {
-    const lanes = nextActions(NOW, manyTrials([3, 4, 5]), [range("r", 1)], [session("s", 0)]);
-    const pitch = lanes.find((l) => l.lane === "pitch")!;
-    expect(pitch.due).toBe(true);
-    expect(pitch.daysOverdue).toBe(1);
-  });
-
-  it("asks for a range probe weekly", () => {
-    const lanes = nextActions(NOW, manyTrials([0]), [range("r", 9)], [session("s", 0)]);
-    const probe = lanes.find((l) => l.lane === "range-probe")!;
-    expect(probe.due).toBe(true);
-    expect(probe.daysOverdue).toBe(2);
-  });
-
-  it("sorts the most overdue due lane to the front", () => {
-    // Enough trials that the baseline lane (which always outranks) is gone.
-    const lanes = nextActions(NOW, manyTrials([0, 1, 2, 3]), [range("r", 20)], [session("s", 5)]);
-    expect(lanes[0].due).toBe(true);
-    expect(lanes[0].lane).toBe("range-probe"); // 13 days overdue beats 4
-    expect(lanes[0].daysOverdue).toBeGreaterThanOrEqual(lanes[1]?.daysOverdue ?? 0);
-  });
-
-  it("every lane carries a label and a call to action", () => {
-    for (const lane of nextActions(NOW, [], [], [])) {
-      expect(lane.title.length).toBeGreaterThan(3);
-      expect(lane.cta.length).toBeGreaterThan(2);
-    }
-  });
+import { fixtureBlock } from "./auditFixtures";
+const now=new Date("2026-09-03T12:00:00Z");
+describe("Next actions, not manufactured urgency",()=>{
+ it("starts with a versioned check-in",()=>{expect(nextActions(now,[],[],[])[0].lane).toBe("test");});
+ it("legacy practice cannot satisfy the check-in requirement",()=>{const rows=fixtureBlock().map(({measurement,...t})=>t);expect(nextActions(now,rows,[],[])[0].lane).toBe("test");});
+ it("incomplete blocks do not satisfy it",()=>expect(nextActions(now,fixtureBlock().slice(0,14),[],[])[0].lane).toBe("test"));
+ it("offers practice after a recent complete block",()=>expect(nextActions(now,fixtureBlock(),[],[])[0].lane).toBe("pitch"));
+ it("offers a repeat after the suggested weekly interval",()=>expect(nextActions(new Date("2026-09-10T12:00:00Z"),fixtureBlock(),[],[])[0].lane).toBe("test"));
+ it("never makes optional range exercise overdue",()=>{for(const l of nextActions(now,[],[],[])){expect(l.lane).not.toBe("range-exercise");expect(l.daysOverdue).toBe(0);}});
+ it("every action explains its purpose",()=>{for(const l of nextActions(now,[],[],[])){expect(l.title.length).toBeGreaterThan(3);expect(l.cta.length).toBeGreaterThan(3);expect(l.detail.length).toBeGreaterThan(30);}});
 });

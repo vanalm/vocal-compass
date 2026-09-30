@@ -54,14 +54,17 @@ export class AttemptClassifier {
 
   classify({ targetMidi, startMidi, samples }: AttemptInput): AttemptAnalysis {
     const voiced = samples.filter(
-      (s) => Number.isFinite(s.midi) && s.clarity >= this.t.minClarity && s.rms >= this.t.minRms,
-    );
+      (s) => Number.isFinite(s.at) && Number.isFinite(s.midi) && Number.isFinite(s.clarity) && Number.isFinite(s.rms) && s.clarity >= this.t.minClarity && s.rms >= this.t.minRms,
+    ).sort((a,b) => a.at-b.at);
 
     if (voiced.length < 3) return this.unscored(targetMidi, voiced);
 
-    const firstAt = voiced[0].at;
-    const early = voiced.filter((s) => s.at - firstAt <= this.t.commitWindowMs);
-    const window = early.length >= 4 ? early : voiced.slice(0, Math.min(voiced.length, 12));
+    // Use the FIRST locally stable window, not the median of several different notes.
+    // 150 ms, <=150 ms gaps and <=45-cent dispersion are provisional engineering
+    // thresholds. They are not a validated measure of intention or vocal health.
+    const stable = this.stableWindows(voiced);
+    if (!stable.length) return this.unscored(targetMidi, voiced);
+    const window = stable[0];
 
     const selectedMidiFloat = median(window.map((s) => s.midi)) as number;
     const selectedMidi = Math.round(selectedMidiFloat);
@@ -139,14 +142,34 @@ export class AttemptClassifier {
     return true;
   }
 
+  private stableWindows(samples: PitchSample[]): PitchSample[][] {
+    const result: PitchSample[][] = [];
+    for (let i=0;i<samples.length;i++) {
+      const window: PitchSample[] = [samples[i]];
+      for (let j=i+1;j<samples.length;j++) {
+        const previous = window[window.length-1];
+        if (samples[j].at-previous.at>150 || samples[j].at<=previous.at) break;
+        window.push(samples[j]);
+        const duration=samples[j].at-samples[i].at;
+        if(duration>=150) {
+          const values=window.map(s=>s.midi);
+          if(window.length>=3 && duration<=350 && stdDev(values)*100<=45 && Math.max(...values)-Math.min(...values)<=1.4) result.push(window);
+          break;
+        }
+      }
+    }
+    return result;
+  }
+
   private pitchCenters(samples: PitchSample[], windowMs: number): number[] {
-    if (!samples.length) return [];
-    const first = samples[0].at;
-    const centers: number[] = [];
-    for (const s of samples) {
-      if (s.at - first > windowMs) break;
-      const center = Math.round(s.midi);
-      if (!centers.length || centers[centers.length - 1] !== center) centers.push(center);
+    if(!samples.length)return [];
+    const windows=this.stableWindows(samples.filter(s=>s.at-samples[0].at<=windowMs));
+    const centers:number[]=[];
+    let previous:number|null=null;
+    for(const window of windows){
+      const center=median(window.map(s=>s.midi))!;
+      // Hysteresis on a sustained center, not every rounded vibrato frame.
+      if(previous==null||Math.abs(center-previous)>=0.8){centers.push(Math.round(center));previous=center;}
     }
     return centers;
   }
@@ -169,7 +192,7 @@ export class AttemptClassifier {
       detectorConfidence: voiced.length ? mean(voiced.map((s) => s.clarity)) : 0,
       acousticErrorKind: "unscored",
       explanation:
-        "The microphone did not capture a stable voiced segment. Retry this trial — it is not interpreted.",
+        "No segment met the stable-pitch scoring rule. This is unscored, not a failed note. Check the microphone and comfort before another attempt.",
     };
   }
 
@@ -189,14 +212,14 @@ export class AttemptClassifier {
     ) {
       return {
         kind: "search",
-        explanation: `The pitch path visited ${a.centersVisited} note centers before settling. The goal is a direct first commitment, not the final tuner position.`,
+        explanation: `The early contour contains ${a.centersVisited} sustained note-center estimates. This may be searching, a deliberate slide, or tracking error; your explanation matters.`,
       };
     }
     if (a.destinationMatch) {
       if (Math.abs(a.targetErrorCents) <= this.t.goodLandingCents) {
         return {
           kind: "success",
-          explanation: `Destination correct. The settled center was ${Math.abs(a.targetErrorCents).toFixed(0)} cents ${a.targetErrorCents < 0 ? "low" : "high"}.`,
+          explanation: `First stable note matched. Its estimated center was ${Math.abs(a.targetErrorCents).toFixed(0)} cents ${a.targetErrorCents < 0 ? "low" : "high"}.`,
         };
       }
       return {
@@ -207,7 +230,7 @@ export class AttemptClassifier {
     if (a.cleanLandingOnSelected) {
       return {
         kind: "selection",
-        explanation: `You landed cleanly on ${noteName(a.selectedMidi)}. The requested destination was ${noteName(a.targetMidi)}. This looks like a destination-selection miss, not poor vocal control.`,
+        explanation: `The first stable center was near ${noteName(a.selectedMidi)}; the requested note was ${noteName(a.targetMidi)}. Pitch alone cannot tell whether you chose a different note or your voice missed the intended one.`,
       };
     }
     return {

@@ -12,6 +12,7 @@ export function useSpacebarAdvance(action: (() => void) | null) {
       if (event.code !== "Space" || event.repeat) return;
       const target = event.target as HTMLElement;
       if (
+        target.closest("button, a, summary") ||
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement ||

@@ -18,9 +18,8 @@ const SLACK_MS = 1600;
 /**
  * Orchestrates one phrase attempt: guide playback at the assigned strength,
  * a count-in so beat one is knowable (onset timing is scored), capture for
- * the phrase's real duration, then rhythm-aware scoring. Verified takes are
- * guide-free first attempts — retries keep practice honest by never
- * overwriting that flag.
+ * the phrase's real duration, then rhythm-aware scoring. These are practice
+ * observations; no held-out, independently verified-transfer claim is made.
  */
 export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>) {
   const { microphone, cues } = useServices();
@@ -37,6 +36,7 @@ export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>)
   const [attemptOfSpec, setAttemptOfSpec] = useState(1);
 
   const samples = useRef<PitchSample[]>([]);
+  const generation = useRef(0), recordId = useRef(crypto.randomUUID()), saving = useRef(false);
   const singStartAt = useRef(0);
   const capturing = useRef(false);
   const finishTimer = useRef<number | null>(null);
@@ -55,31 +55,37 @@ export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>)
       },
     });
     return () => {
+      generation.current += 1; capturing.current = false; cues.stop();
+      if (finishTimer.current != null) window.clearTimeout(finishTimer.current);
       unsubscribe();
       microphone.stop();
     };
-  }, [microphone]);
+  }, [microphone, cues]);
 
   const playGuide = useCallback(
     async (r: RealizedPhrase, guide: PhraseExerciseSpec["guide"], tonicMidi: number) => {
+      const token = generation.current;
       setCuePlaying(true);
       await cues.playCadence(tonicMidi);
+      if (token !== generation.current) return;
       await cues.playRealizedPhrase(r, guide);
-      setCuePlaying(false);
+      if (token === generation.current) setCuePlaying(false);
     },
     [cues],
   );
 
   const start = useCallback(
     async (nextSpec: PhraseExerciseSpec, attempt = 1) => {
+      const token=++generation.current; recordId.current=crypto.randomUUID();
       const r = realizePhrase(nextSpec);
       setSpec(nextSpec);
       setRealized(r);
       setScore(null);
       setAttemptOfSpec(attempt);
       setPhase("listen");
-      await playGuide(r, nextSpec.guide, nextSpec.keyTonicMidi);
-      setPhase("ready");
+      try { await playGuide(r, nextSpec.guide, nextSpec.keyTonicMidi); }
+      catch (error) { if(token===generation.current) {setMicError(error instanceof Error?error.message:"Audio unavailable");setPhase("idle");} return; }
+      if(token===generation.current)setPhase("ready");
     },
     [playGuide],
   );
@@ -87,8 +93,10 @@ export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>)
   const replay = useCallback(async () => {
     if (!realized || !spec || cuePlaying || phase !== "ready") return;
     setPhase("listen");
-    await playGuide(realized, spec.guide, spec.keyTonicMidi);
-    setPhase("ready");
+    const token=generation.current;
+    try {await playGuide(realized, spec.guide, spec.keyTonicMidi);}
+    catch (error) {setMicError(error instanceof Error?error.message:"Audio unavailable");}
+    if(token===generation.current)setPhase("ready");
   }, [realized, spec, cuePlaying, phase, playGuide]);
 
   const finish = useCallback(() => {
@@ -97,23 +105,31 @@ export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>)
     if (finishTimer.current != null) window.clearTimeout(finishTimer.current);
     const relative = samples.current.map((s) => ({ ...s, at: s.at - singStartAt.current }));
     setScore(scorePhrase(realized.notes, relative));
+    microphone.stop(); cues.stop();
     setPhase("review");
-  }, [realized]);
+  }, [realized, microphone, cues]);
   const finishRef = useRef(finish);
   finishRef.current = finish;
 
   /** Commit: count-in, then capture for the phrase's duration plus slack. */
   const go = useCallback(async () => {
     if (!realized || !spec || cuePlaying || phase !== "ready") return;
+    const token=generation.current;
     setPhase("countin");
     await microphone.start();
-    await cues.playCountIn(spec.bpm);
+    if(token!==generation.current)return;
+    if(microphone.status!=="live"){setPhase("ready");return;}
+    try {await cues.playCountIn(spec.bpm);}
+    catch (error) {microphone.stop();setMicError(error instanceof Error?error.message:"Count-in failed");setPhase("ready");return;}
+    if(token!==generation.current)return;
     samples.current = [];
     singStartAt.current = Date.now();
     capturing.current = true;
     setPhase("sing");
     // Chord phrases keep their pads sounding while the singer works.
-    if (realized.chords.length > 0) void cues.playRealizedPhrase(realized, "none");
+    // Playback during capture can be mistaken for the singer. The chord guide
+    // belongs before the take until accompaniment rejection is validated.
+
     finishTimer.current = window.setTimeout(() => finishRef.current(), realized.totalMs + SLACK_MS);
   }, [realized, spec, cuePlaying, phase, microphone, cues]);
 
@@ -123,9 +139,10 @@ export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>)
   }, [spec, attemptOfSpec, start]);
 
   const save = useCallback(async () => {
-    if (!spec || !score) return;
+    if (!spec || !score || saving.current) return;
+    saving.current=true;
     const record: PhraseRecord = {
-      id: crypto.randomUUID(),
+      id: recordId.current,
       createdAt: new Date().toISOString(),
       phraseId: spec.phrase.id,
       phraseName: spec.phrase.name,
@@ -134,7 +151,8 @@ export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>)
       bpm: spec.bpm,
       role: spec.role,
       guide: spec.guide,
-      verified: spec.guide === "none" && attemptOfSpec === 1,
+      // A local first take is not a validated cold/transfer test.
+      verified: false,
       hits: score.hits,
       misses: score.misses,
       extras: score.extras,
@@ -148,7 +166,9 @@ export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>)
         rms: s.rms,
       })),
     };
-    await onSave(record);
+    try {await onSave(record);}
+    catch {setMicError("Could not save this phrase. Retry saving before leaving.");return;}
+    finally {saving.current=false;}
     setPhase("idle");
     setSpec(null);
     setRealized(null);
@@ -156,13 +176,14 @@ export function usePhraseRunner(onSave: (record: PhraseRecord) => Promise<void>)
   }, [spec, score, attemptOfSpec, onSave]);
 
   const discard = useCallback(() => {
+    generation.current += 1; cues.stop(); microphone.stop();
     capturing.current = false;
     if (finishTimer.current != null) window.clearTimeout(finishTimer.current);
     setPhase("idle");
     setSpec(null);
     setRealized(null);
     setScore(null);
-  }, []);
+  }, [cues,microphone]);
 
   return {
     phase,
